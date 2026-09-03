@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 35 38% 96%;
+    --foreground: 350 50% 12%;
+    --card: 35 44% 90%;
+    --card-foreground: 350 50% 12%;
+    --popover: 35 44% 90%;
+    --popover-foreground: 350 50% 12%;
+    --primary: 350 47% 22%;
+    --primary-foreground: 35 44% 90%;
+    --secondary: 350 40% 28%;
+    --secondary-foreground: 35 44% 90%;
+    --muted: 35 25% 80%;
+    --muted-foreground: 350 20% 35%;
+    --accent: 35 18% 70%;
+    --accent-foreground: 350 50% 12%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 350 25% 75%;
+    --input: 350 25% 75%;
+    --ring: 350 47% 22%;
+    --radius: 0.5rem;
+    --chart-1: 350 47% 22%;
+    --chart-2: 35 18% 70%;
+    --chart-3: 350 40% 28%;
+    --chart-4: 35 44% 90%;
+    --chart-5: 350 20% 35%;
+    --font-serif: 'Playfair Display', Georgia, serif;
+    --font-sans: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  .luxe-container {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  .luxe-card {
+    @apply bg-champagne-200 rounded-lg overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-burgundy/20;
+  }
+  .luxe-btn-primary {
+    @apply bg-champagne-400 text-burgundy-700 font-medium tracking-wide uppercase px-6 py-3 rounded-md transition-all duration-300 hover:bg-champagne-500 hover:shadow-lg;
+  }
+  .luxe-btn-outline {
+    @apply border border-burgundy-700 text-burgundy-700 font-medium tracking-wide uppercase px-6 py-3 rounded-md transition-all duration-300 hover:bg-burgundy-700 hover:text-champagne-200;
+  }
+  .luxe-input {
+    @apply w-full bg-white/50 border border-burgundy/20 rounded-md px-4 py-3 text-burgundy-700 placeholder:text-burgundy/40 focus:outline-none focus:ring-2 focus:ring-champagne-400 focus:border-transparent transition-all;
+  }
+  .luxe-label {
+    @apply block text-sm font-medium text-burgundy-700 mb-2 uppercase tracking-wider;
+  }
+  .shimmer-bg {
+    background: linear-gradient(90deg, #E8D8C4 0%, #F0E8DC 50%, #E8D8C4 100%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s linear infinite;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #E8D8C4;
+}
+::-webkit-scrollbar-thumb {
+  background: #6D2932;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #561C24;
+}
+
+/* Hide scrollbar for carousel */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Image lazy load fade-in */
+img {
+  transition: opacity 0.3s ease;
+}
