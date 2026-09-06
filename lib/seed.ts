@@ -7,7 +7,7 @@ import {
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 
-const ADMIN_EMAIL = 'admin@evolveluxe.dz';
+const ADMIN_EMAIL = 'Lokmaneheguehoug2@gmail.com';
 const ADMIN_PASSWORD = 'Lok12mane';
 
 const CATEGORIES = [
@@ -350,7 +350,7 @@ export async function seedDatabase(): Promise<void> {
   }
 }
 
-async function ensureAdminUser(): Promise<void> {
+export async function ensureAdminUser(): Promise<void> {
   try {
     // Try to create the admin auth account
     try {
