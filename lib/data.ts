@@ -14,7 +14,28 @@ import {
   DocumentData,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Product, Category, Coupon, Order, Review, OrderInput } from '@/lib/types';
+import type { Product, Category, Coupon, Order, Review, OrderInput, StoreSettings } from '@/lib/types';
+
+const defaultStoreSettings: StoreSettings = {
+  phone: '+213 555 000 000',
+  email: 'contact@evolveluxe.dz',
+  address: 'Alger, Algeria',
+  description: 'Premium men\'s luxury eyewear, leather bags, wristwear, and accessories. Crafted for the discerning gentleman.',
+  instagram: '',
+  tiktok: '',
+  facebook: '',
+};
+
+export async function getStoreSettings(): Promise<StoreSettings> {
+  try {
+    const snapshot = await getDoc(doc(db, 'settings', 'store'));
+    return snapshot.exists() ? { ...defaultStoreSettings, ...snapshot.data() } as StoreSettings : defaultStoreSettings;
+  } catch {
+    return defaultStoreSettings;
+  }
+}
+
+export { defaultStoreSettings };
 
 function snapToCategory(d: DocumentData): Category {
   return {
