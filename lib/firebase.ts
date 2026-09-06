@@ -3,7 +3,7 @@ import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
-  apiKey: process.env.apiKey,
+  apiKey: process.env.apiKey_2,
   authDomain: 'evolve-luxe.firebaseapp.com',
   projectId: 'evolve-luxe',
   storageBucket: 'evolve-luxe.firebasestorage.app',
