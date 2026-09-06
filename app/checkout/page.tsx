@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, Tag, Loader2, Sparkles } from 'lucide-react';
 import { useCartStore } from '@/lib/stores/cart-store';
-import { validateCoupon, createOrder, formatPrice, calculateLoyaltyPoints } from '@/lib/data';
+import { validateCoupon, createOrder, formatPrice, calculateLoyaltyPoints, getStoreSettings } from '@/lib/data';
+import type { StoreSettings } from '@/lib/types';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -28,14 +29,22 @@ export default function CheckoutPage() {
     wilaya: '',
     address: '',
     notes: '',
+    shipping_method: 'home' as 'home' | 'office',
   });
+  const [shippingSettings, setShippingSettings] = useState<StoreSettings | null>(null);
   const [couponCode, setCouponCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
   const [validating, setValidating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const total = subtotal - discount;
+  useEffect(() => {
+    getStoreSettings().then(setShippingSettings);
+  }, []);
+
+  const shippingPromotionActive = Boolean(shippingSettings?.free_shipping_enabled && (!shippingSettings.free_shipping_until || new Date(shippingSettings.free_shipping_until) >= new Date()));
+  const shippingCost = shippingPromotionActive ? 0 : form.shipping_method === 'office' ? (shippingSettings?.office_delivery_rate ?? 400) : (shippingSettings?.home_delivery_rate ?? 700);
+  const total = subtotal - discount + shippingCost;
   const loyaltyPoints = calculateLoyaltyPoints(total);
 
   const handleValidateCoupon = async () => {
@@ -64,7 +73,7 @@ export default function CheckoutPage() {
     const result = await createOrder({
       ...form,
       items: items.map((item) => ({
-        product_id: item.productId,
+        product_id: item.productId || (item as { id?: string }).id || 'custom_product',
         product_name: item.name,
         product_image: item.image,
         quantity: item.quantity,
@@ -77,6 +86,8 @@ export default function CheckoutPage() {
       total,
       coupon_code: couponApplied ? couponCode : undefined,
       loyalty_points_earned: loyaltyPoints,
+      shipping_method: form.shipping_method,
+      shipping_cost: shippingCost,
     });
     setSubmitting(false);
     if (result.error) {
@@ -149,6 +160,13 @@ export default function CheckoutPage() {
                   {WILAYAS.map((w) => (
                     <option key={w} value={w}>{w}</option>
                   ))}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="luxe-label">Delivery Method *</label>
+                <select required value={form.shipping_method} onChange={(e) => setForm({ ...form, shipping_method: e.target.value as 'home' | 'office' })} className="luxe-input cursor-pointer">
+                  <option value="home">Livraison à Domicile — {formatPrice(shippingPromotionActive ? 0 : (shippingSettings?.home_delivery_rate ?? 700))}</option>
+                  <option value="office">Livraison Stop Desk — {formatPrice(shippingPromotionActive ? 0 : (shippingSettings?.office_delivery_rate ?? 400))}</option>
                 </select>
               </div>
               <div className="md:col-span-2">
@@ -259,8 +277,8 @@ export default function CheckoutPage() {
                 </div>
               )}
               <div className="flex justify-between text-burgundy/70">
-                <span>Shipping</span>
-                <span className="text-green-600">Free (COD)</span>
+                <span>Shipping ({form.shipping_method === 'office' ? 'Stop Desk' : 'Home'})</span>
+                <span className={shippingCost === 0 ? 'text-green-600' : ''}>{shippingCost === 0 ? 'Free' : formatPrice(shippingCost)}</span>
               </div>
             </div>
             <div className="border-t border-burgundy/10 pt-4 mt-4 mb-4">

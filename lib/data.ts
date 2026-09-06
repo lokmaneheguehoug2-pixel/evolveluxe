@@ -24,6 +24,12 @@ const defaultStoreSettings: StoreSettings = {
   instagram: '',
   tiktok: '',
   facebook: '',
+  office_delivery_rate: 400,
+  home_delivery_rate: 700,
+  free_shipping_enabled: false,
+  free_shipping_mode: 'days',
+  free_shipping_days: 7,
+  free_shipping_until: '',
 };
 
 export async function getStoreSettings(): Promise<StoreSettings> {
@@ -315,7 +321,22 @@ export async function validateCoupon(
 
 export async function createOrder(orderData: OrderInput): Promise<{ order: Order | null; error: string | null }> {
   try {
-    const orderRef = await addDoc(collection(db, 'orders'), {
+    const clean = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(clean);
+      if (value && typeof value === 'object' && !(value instanceof Timestamp)) {
+        return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined).map(([key, item]) => [key, clean(item)]));
+      }
+      return value;
+    };
+    const safeItems = orderData.items.map((item) => clean({
+      ...item,
+      product_id: item.product_id || 'custom_product',
+      product_name: item.product_name || '',
+      product_image: item.product_image || '',
+      variant_color: item.variant_color || null,
+      variant_size: item.variant_size || null,
+    })) as OrderInput['items'];
+    const orderRef = await addDoc(collection(db, 'orders'), clean({
       full_name: orderData.full_name,
       phone: orderData.phone,
       wilaya: orderData.wilaya,
@@ -326,13 +347,15 @@ export async function createOrder(orderData: OrderInput): Promise<{ order: Order
       coupon_code: orderData.coupon_code || null,
       loyalty_points_earned: orderData.loyalty_points_earned,
       notes: orderData.notes || null,
+      shipping_method: orderData.shipping_method || 'home',
+      shipping_cost: orderData.shipping_cost || 0,
       status: 'pending',
       created_at: serverTimestamp(),
       updated_at: serverTimestamp(),
-    });
+    }));
 
     // Add order items as subcollection
-    for (const item of orderData.items) {
+    for (const item of safeItems) {
       await addDoc(collection(db, 'orders', orderRef.id, 'order_items'), {
         product_id: item.product_id,
         product_name: item.product_name,

@@ -15,6 +15,12 @@ export type StoreSettings = {
   instagram: string;
   tiktok: string;
   facebook: string;
+  office_delivery_rate: number;
+  home_delivery_rate: number;
+  free_shipping_enabled: boolean;
+  free_shipping_mode: 'days' | 'date';
+  free_shipping_days: number;
+  free_shipping_until: string;
 };
 
 export type Product = {
@@ -139,4 +145,6 @@ export type OrderInput = {
   coupon_code?: string;
   loyalty_points_earned: number;
   notes?: string;
+  shipping_method?: 'home' | 'office';
+  shipping_cost?: number;
 };
