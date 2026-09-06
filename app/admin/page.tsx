@@ -36,10 +36,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SettingsTab } from '@/components/admin/settings-tab';
+import { AdminErrorBoundary } from '@/components/admin/admin-error-boundary';
 
 type Tab = 'overview' | 'products' | 'orders' | 'coupons' | 'settings';
 
-export default function AdminPage() {
+function AdminDashboard() {
   const router = useRouter();
   const { user, hydrated, signOut } = useAuthStore();
   const [tab, setTab] = useState<Tab>('overview');
@@ -49,6 +50,7 @@ export default function AdminPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [settings, setSettings] = useState<StoreSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -57,21 +59,30 @@ export default function AdminPage() {
       return;
     }
 
+    let active = true;
     (async () => {
-      const [p, o, c, cat, storeSettings] = await Promise.all([
-        getProducts(),
-        getOrders(),
-        getAllCoupons(),
-        getCategories(),
-        getStoreSettings(),
-      ]);
-      setProducts(p);
-      setOrders(o);
-      setCoupons(c);
-      setCategories(cat);
-      setSettings(storeSettings);
-      setLoading(false);
+      try {
+        const [p, o, c, cat, storeSettings] = await Promise.all([
+          getProducts().catch(() => []),
+          getOrders().catch(() => []),
+          getAllCoupons().catch(() => []),
+          getCategories().catch(() => []),
+          getStoreSettings().catch(() => null),
+        ]);
+        if (!active) return;
+        setProducts(Array.isArray(p) ? p : []);
+        setOrders(Array.isArray(o) ? o : []);
+        setCoupons(Array.isArray(c) ? c : []);
+        setCategories(Array.isArray(cat) ? cat : []);
+        setSettings(storeSettings ?? null);
+        setLoadError(null);
+      } catch {
+        if (active) setLoadError('Some dashboard data could not be loaded.');
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
+    return () => { active = false; };
   }, [hydrated, router, user]);
 
   if (!hydrated || !user || user.role !== 'admin') {
@@ -82,12 +93,15 @@ export default function AdminPage() {
     );
   }
 
-  const totalRevenue = orders
-    .filter((o) => o.status !== 'cancelled')
-    .reduce((sum, o) => sum + Number(o.total), 0);
-  const totalOrders = orders.length;
+  const shippingRates = (settings as (StoreSettings & { shippingRates?: { home?: number; desk?: number; freeShipping?: boolean } }) | null)?.shippingRates || { home: 0, desk: 0, freeShipping: false };
+  const safeOrders = Array.isArray(orders) ? orders.filter(Boolean) : [];
+  const safeProducts = Array.isArray(products) ? products.filter(Boolean) : [];
+  const totalRevenue = safeOrders
+    .filter((o) => o?.status !== 'cancelled')
+    .reduce((sum, o) => sum + (Number.isFinite(Number(o?.total)) ? Number(o.total) : 0), 0);
+  const totalOrders = safeOrders.length;
   const netProfit = totalRevenue * 0.35;
-  const totalCustomers = new Set(orders.map((o) => o.phone)).size;
+  const totalCustomers = new Set(safeOrders.map((o) => o?.phone).filter(Boolean)).size;
 
   return (
     <div className="min-h-screen bg-champagne-50 flex">
@@ -143,26 +157,35 @@ export default function AdminPage() {
           </div>
         ) : (
           <>
+            {loadError && <p role="status" className="mb-4 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800">{loadError} Showing safe defaults.</p>}
             {tab === 'overview' && (
               <OverviewTab
                 totalRevenue={totalRevenue}
                 totalOrders={totalOrders}
                 netProfit={netProfit}
                 totalCustomers={totalCustomers}
-                orders={orders}
-                products={products}
+                orders={safeOrders}
+                products={safeProducts}
               />
             )}
             {tab === 'products' && (
-              <ProductsTab products={products} categories={categories} setProducts={setProducts} />
+              <ProductsTab products={safeProducts} categories={Array.isArray(categories) ? categories.filter(Boolean) : []} setProducts={setProducts} />
             )}
-            {tab === 'orders' && <OrdersTab orders={orders} setOrders={setOrders} />}
+            {tab === 'orders' && <OrdersTab orders={safeOrders} setOrders={setOrders} />}
             {tab === 'coupons' && <CouponsTab coupons={coupons} setCoupons={setCoupons} />}
             {tab === 'settings' && settings && <SettingsTab settings={settings} onSaved={setSettings} />}
           </>
         )}
       </main>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <AdminErrorBoundary>
+      <AdminDashboard />
+    </AdminErrorBoundary>
   );
 }
 
