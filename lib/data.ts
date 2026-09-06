@@ -164,7 +164,7 @@ export async function getProducts(opts?: {
     }
 
     const snap = await getDocs(q);
-    let products = snap.docs.map((d) => snapToProduct(d.data()));
+    let products = snap.docs.map((d) => snapToProduct({ id: d.id, ...d.data() }));
 
     // Fetch categories for each product
     const cats = await getCategories();
