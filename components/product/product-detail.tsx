@@ -319,7 +319,7 @@ export function ProductDetail({
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-4 pt-6 border-t border-burgundy/10">
             {[
-              { icon: Truck, label: 'Free Delivery' },
+              { icon: Truck, label: 'Delivery to 58 Wilayas' },
               { icon: ShieldCheck, label: 'Authentic' },
               { icon: RotateCcw, label: '7-Day Returns' },
             ].map((item, idx) => (
@@ -328,6 +328,7 @@ export function ProductDetail({
                 <span className="text-xs text-burgundy/60 uppercase tracking-wider">
                   {item.label}
                 </span>
+                {item.label === 'Delivery to 58 Wilayas' && <span className="text-[10px] text-burgundy/45">Fast COD delivery across Algeria</span>}
               </div>
             ))}
           </div>

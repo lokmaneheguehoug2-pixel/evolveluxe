@@ -6,8 +6,8 @@ export function FeaturesBar() {
   const features = [
     {
       icon: Truck,
-      title: 'Free Delivery',
-      desc: 'On all orders across Algeria',
+      title: 'Delivery to 58 Wilayas',
+      desc: 'Fast COD delivery across Algeria',
     },
     {
       icon: ShieldCheck,
