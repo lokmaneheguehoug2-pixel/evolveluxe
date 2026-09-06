@@ -36,11 +36,15 @@ export default function AccountPage() {
   }, [hydrated, user]);
 
   useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const data = await getOrders();
-      setOrders(data);
-    })();
+    if (!user) {
+      setOrders([]);
+      return;
+    }
+    let active = true;
+    void getOrders()
+      .then((data) => { if (active) setOrders(Array.isArray(data) ? data : []); })
+      .catch((error) => { console.warn('[v0] Orders unavailable', error); if (active) setOrders([]); });
+    return () => { active = false; };
   }, [user]);
 
   const handleAuth = async (e: React.FormEvent) => {

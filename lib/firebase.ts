@@ -1,4 +1,4 @@
-import { getApp, getApps, initializeApp } from 'firebase/app'
+import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
@@ -12,7 +12,13 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || 'G-Y439BT9BC4',
 }
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+let app: FirebaseApp
+try {
+  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+} catch (error) {
+  console.warn('[v0] Firebase app initialization failed; using fallback configuration', error)
+  app = initializeApp({ ...firebaseConfig, apiKey: 'fallback-runtime-key' }, 'fallback-runtime-app')
+}
 
 export const auth = getAuth(app)
 export const db = getFirestore(app)

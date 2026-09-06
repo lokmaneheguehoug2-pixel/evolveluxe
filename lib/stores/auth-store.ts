@@ -128,16 +128,25 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null });
       },
       hydrate: () => {
-        set({ hydrated: true });
-        if (!auth.onAuthStateChanged) return;
-        onAuthStateChanged(auth, async (fbUser) => {
-          if (fbUser) {
-            const profile = await fetchUserProfile(fbUser);
-            set({ user: profile });
-          } else {
-            set({ user: null });
-          }
-        });
+        set({ isLoading: true });
+        try {
+          const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+            try {
+              const profile = fbUser ? await fetchUserProfile(fbUser) : null;
+              set({ user: profile, hydrated: true, isLoading: false });
+            } catch (error) {
+              console.warn('[v0] Auth profile hydration skipped', error);
+              set({ user: null, hydrated: true, isLoading: false });
+            }
+          }, (error) => {
+            console.warn('[v0] Auth state unavailable', error);
+            set({ user: null, hydrated: true, isLoading: false });
+          });
+          return unsubscribe;
+        } catch (error) {
+          console.warn('[v0] Firebase auth initialization unavailable', error);
+          set({ user: null, hydrated: true, isLoading: false });
+        }
       },
     }),
     {
