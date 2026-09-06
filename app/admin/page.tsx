@@ -40,25 +40,35 @@ import { AdminErrorBoundary } from '@/components/admin/admin-error-boundary';
 
 type Tab = 'overview' | 'products' | 'orders' | 'coupons' | 'settings';
 
-const MAX_IMAGE_BYTES = 280 * 1024;
+const MAX_IMAGE_BYTES = 95 * 1024;
+const MAX_IMAGES_BYTES = 800 * 1024;
+
+function dataUrlBytes(value: string) {
+  if (!value) return 0;
+  if (!value.startsWith('data:')) return new TextEncoder().encode(value).length;
+  const base64 = value.split(',')[1] || '';
+  return Math.floor((base64.length * 3) / 4);
+}
 
 function compressImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     const objectUrl = URL.createObjectURL(file);
     image.onload = () => {
-      const scale = Math.min(1, 800 / Math.max(image.width, image.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(image.width * scale));
-      canvas.height = Math.max(1, Math.round(image.height * scale));
-      const context = canvas.getContext('2d');
-      if (!context) { URL.revokeObjectURL(objectUrl); reject(new Error('Could not prepare image')); return; }
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      let quality = 0.7;
-      let result = canvas.toDataURL('image/jpeg', quality);
-      while (result.length * 0.75 > MAX_IMAGE_BYTES && quality > 0.35) {
-        quality -= 0.05;
+      let scale = Math.min(1, 600 / Math.max(image.width, image.height));
+      let quality = 0.55;
+      let result = '';
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext('2d');
+        if (!context) { URL.revokeObjectURL(objectUrl); reject(new Error('Could not prepare image')); return; }
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
         result = canvas.toDataURL('image/jpeg', quality);
+        if (dataUrlBytes(result) <= MAX_IMAGE_BYTES) break;
+        if (quality > 0.4) quality -= 0.05;
+        else scale *= 0.85;
       }
       URL.revokeObjectURL(objectUrl);
       resolve(result);
@@ -492,16 +502,32 @@ function ProductForm({
     is_on_sale: product?.is_on_sale || false,
   });
   const [saving, setSaving] = useState(false);
-  const [imageUrls, setImageUrls] = useState<string[]>(product?.images || []);
+  const [compressing, setCompressing] = useState(false);
+  const initialImages = product?.images;
+  const [imageUrls, setImageUrls] = useState<string[]>(Array.isArray(initialImages) ? initialImages : []);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files?.length) return;
+    setCompressing(true);
     try {
       const previews = await Promise.all(Array.from(files).map(compressImage));
-      setImageUrls((current) => [...current, ...previews]);
+      setImageUrls((current) => {
+        const combined = Array.from(new Set([...current, ...previews]));
+        let total = 0;
+        const limited = combined.filter((image) => {
+          const nextTotal = total + dataUrlBytes(image);
+          if (nextTotal > MAX_IMAGES_BYTES) return false;
+          total = nextTotal;
+          return true;
+        });
+        if (limited.length < combined.length) toast.warning('Some images were skipped to keep the product under Firestore’s 800 KB limit.');
+        return limited;
+      });
       toast.success(`${previews.length} image${previews.length === 1 ? '' : 's'} compressed and ready`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to compress image');
+    } finally {
+      setCompressing(false);
     }
   };
 
@@ -509,7 +535,15 @@ function ProductForm({
     e.preventDefault();
     setSaving(true);
     const typedImages = String(form.images || '').split('\n').map((s) => s.trim()).filter(Boolean);
-    const images = Array.from(new Set([...imageUrls, ...typedImages])).filter((image): image is string => typeof image === 'string' && image.length > 0);
+    const allImages = Array.from(new Set([...imageUrls, ...typedImages])).filter((image): image is string => typeof image === 'string' && image.length > 0);
+    let imageBytes = 0;
+    const images = allImages.filter((image) => {
+      const nextBytes = imageBytes + dataUrlBytes(image);
+      if (nextBytes > MAX_IMAGES_BYTES) return false;
+      imageBytes = nextBytes;
+      return true;
+    });
+    if (images.length < allImages.length) toast.warning('Some images were excluded to keep this product below Firestore’s 800 KB limit.');
     const name = String(form.name || '').trim();
     const slug = String(form.slug || name.toLowerCase().replace(/\s+/g, '-')).trim();
     const payload = {
@@ -604,9 +638,11 @@ function ProductForm({
               <label className="luxe-label">Stock</label>
               <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} className="luxe-input" />
             </div>
-            <div className="md:col-span-2">
-              <label className="luxe-label">Product Images</label>
-              <input type="file" accept="image/*" multiple onChange={(e) => void handleFiles(e.target.files)} className="luxe-input file:mr-3 file:border-0 file:bg-burgundy-700 file:px-3 file:py-2 file:text-champagne-50" />
+          <div className="md:col-span-2">
+            <label className="luxe-label">Product Images</label>
+            <input disabled={compressing || saving} type="file" accept="image/*" multiple onChange={(e) => void handleFiles(e.target.files)} className="luxe-input file:mr-3 file:border-0 file:bg-burgundy-700 file:px-3 file:py-2 file:text-champagne-50" />
+            {compressing && <p role="status" className="mt-2 text-sm font-medium text-burgundy-700">Compressing images...</p>}
+            <p className="mt-1 text-xs text-burgundy/55">Each image is compressed below 95 KB; the full gallery is capped at 800 KB.</p>
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mt-3">
                 {imageUrls.map((image, index) => (
                   <div key={`${image.slice(0, 20)}-${index}`} className="relative aspect-square rounded overflow-hidden bg-burgundy/5">
