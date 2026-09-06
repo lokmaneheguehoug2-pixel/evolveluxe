@@ -1,34 +1,19 @@
-'use client';
-
-import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getApp, getApps, initializeApp } from 'firebase/app'
+import { getAuth } from 'firebase/auth'
+import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-};
-
-const hasApiKey = !!firebaseConfig.apiKey;
-
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
-
-if (hasApiKey) {
-  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-} else {
-  // During SSR/build when env vars aren't available, use inert stubs
-  app = {} as FirebaseApp;
-  auth = {} as Auth;
-  db = {} as Firestore;
+  apiKey: process.env.apiKey,
+  authDomain: 'evolve-luxe.firebaseapp.com',
+  projectId: 'evolve-luxe',
+  storageBucket: 'evolve-luxe.firebasestorage.app',
+  messagingSenderId: '850790889441',
+  appId: '1:850790889441:web:145f7df494149f38d884a0',
+  measurementId: 'G-Y439BT9BC4',
 }
 
-export { app, auth, db };
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+
+export const auth = getAuth(app)
+export const db = getFirestore(app)
+export { app }
