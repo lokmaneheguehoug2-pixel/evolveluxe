@@ -106,14 +106,14 @@ function AdminDashboard() {
   return (
     <div className="min-h-screen bg-champagne-50 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-burgundy-700 text-champagne-200 min-h-screen fixed left-0 top-0 bottom-0 flex flex-col">
-        <div className="p-6 border-b border-champagne-400/10">
+      <aside className="w-20 sm:w-64 bg-burgundy-700 text-champagne-200 min-h-screen fixed left-0 top-0 bottom-0 flex flex-col z-40">
+        <div className="p-3 sm:p-6 border-b border-champagne-400/10">
           <div className="flex items-center gap-2">
-            <span className="font-serif text-xl font-bold text-champagne-200">EVOLVE</span>
-            <span className="font-serif text-xl font-light text-champagne-400">Admin</span>
+            <span className="font-serif text-sm sm:text-xl font-bold text-champagne-200">EVOLVE</span>
+            <span className="hidden sm:inline font-serif text-xl font-light text-champagne-400">Admin</span>
           </div>
         </div>
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-2 sm:p-4 space-y-2 sm:space-y-1">
           {[
             { id: 'overview' as const, label: 'Overview', icon: LayoutDashboard },
             { id: 'products' as const, label: 'Products', icon: Package },
@@ -125,13 +125,13 @@ function AdminDashboard() {
               key={item.id}
               onClick={() => setTab(item.id)}
               className={cn(
-                'w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium uppercase tracking-wider transition-colors',
+                'w-full flex items-center justify-center sm:justify-start gap-3 px-2 sm:px-4 py-4 sm:py-3 rounded-md text-sm font-medium uppercase tracking-wider transition-colors',
                 tab === item.id
                   ? 'bg-champagne-400 text-burgundy-700'
                   : 'text-champagne-200/70 hover:bg-burgundy-600 hover:text-champagne-200'
               )}
             >
-              <item.icon className="h-4 w-4" /> {item.label}
+              <item.icon className="h-5 w-5 shrink-0" /> <span className="hidden sm:inline">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -150,7 +150,7 @@ function AdminDashboard() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 ml-64 p-8">
+      <main className="flex-1 ml-20 sm:ml-64 p-4 sm:p-8 min-w-0 overflow-x-hidden">
         {loading ? (
           <div className="flex items-center justify-center min-h-[60vh]">
             <Loader2 className="h-8 w-8 animate-spin text-burgundy-700" />
@@ -277,7 +277,7 @@ function OverviewTab({
                   <span className="text-burgundy/40 font-serif text-lg">{idx + 1}</span>
                   <span className="text-burgundy-700">{p.name}</span>
                 </div>
-                <div className="text-right">
+              <div className="text-left sm:text-right">
                   <p className="text-burgundy-700 font-medium">{p.sales} sold</p>
                   <p className="text-burgundy/50 text-xs">{formatPrice(p.revenue)}</p>
                 </div>
@@ -319,10 +319,14 @@ function ProductsTab({
   const [showForm, setShowForm] = useState(false);
 
   const handleDelete = async (id: string) => {
+    if (!id) {
+      toast.error('This product is missing its Firestore ID.');
+      return;
+    }
     if (!confirm('Delete this product?')) return;
     try {
       await deleteDoc(doc(db, 'products', id));
-      setProducts(products.filter((p) => p.id !== id));
+      setProducts(products.filter((p) => p?.id !== id));
       toast.success('Product deleted');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete');
@@ -344,8 +348,8 @@ function ProductsTab({
         </button>
       </div>
 
-      <div className="bg-champagne-100 rounded-lg overflow-hidden">
-        <table className="w-full">
+      <div className="hidden md:block bg-champagne-100 rounded-lg overflow-hidden overflow-x-auto">
+        <table className="w-full min-w-[720px]">
           <thead className="bg-burgundy-700/5">
             <tr>
               <th className="text-left p-4 text-sm font-medium text-burgundy/70 uppercase tracking-wider">Product</th>
@@ -361,7 +365,7 @@ function ProductsTab({
                 <td className="p-4">
                   <div className="flex items-center gap-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.images[0]} alt={p.name} className="h-12 w-12 rounded object-cover" />
+                    {Array.isArray(p?.images) && p.images[0] ? <img src={p.images[0]} alt={p.name || 'Product'} className="h-12 w-12 rounded object-cover" /> : <div className="h-12 w-12 rounded bg-burgundy/10" />}
                     <span className="text-burgundy-700 font-medium">{p.name}</span>
                   </div>
                 </td>
@@ -396,6 +400,16 @@ function ProductsTab({
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="md:hidden space-y-3">
+        {products.map((p) => {
+          const image = Array.isArray(p?.images) ? p.images[0] : '';
+          return <div key={p?.id || p?.slug} className="bg-champagne-100 rounded-lg p-4 flex gap-3">
+            {image ? <img src={image} alt={p?.name || 'Product'} className="h-16 w-16 rounded object-cover shrink-0" /> : <div className="h-16 w-16 rounded bg-burgundy/10 shrink-0" />}
+            <div className="min-w-0 flex-1"><p className="font-medium text-burgundy-700 truncate">{p?.name || 'Untitled product'}</p><p className="text-sm text-burgundy/60">{formatPrice(Number(p?.price) || 0)} · Stock {Number(p?.stock) || 0}</p><p className="text-xs text-burgundy/50">{p?.category?.name || 'Uncategorized'}</p></div>
+            <div className="flex items-center gap-1"><button type="button" aria-label="Edit product" onClick={() => { setEditing(p); setShowForm(true); }} className="min-h-11 min-w-11 p-3 text-burgundy/70"><Pencil className="h-5 w-5" /></button><button type="button" aria-label="Delete product" onClick={() => handleDelete(p?.id || '')} className="min-h-11 min-w-11 p-3 text-red-600"><Trash2 className="h-5 w-5" /></button></div>
+          </div>;
+        })}
       </div>
 
       {showForm && (
@@ -600,6 +614,10 @@ function OrdersTab({ orders, setOrders }: { orders: Order[]; setOrders: React.Di
   const STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
   const handleStatusChange = async (orderId: string, status: Order['status']) => {
+    if (!orderId || orderId === 'unknown') {
+      toast.error('This order is missing its Firestore ID.');
+      return;
+    }
     const { error } = await updateOrderStatus(orderId, status);
     if (error) {
       toast.error(error);
@@ -608,6 +626,8 @@ function OrdersTab({ orders, setOrders }: { orders: Order[]; setOrders: React.Di
     setOrders(orders.map((o) => (o.id === orderId ? { ...o, status } : o)));
     toast.success('Order status updated');
   };
+
+  const handleCancel = (orderId: string) => handleStatusChange(orderId, 'cancelled');
 
   return (
     <div>
@@ -661,7 +681,7 @@ function OrdersTab({ orders, setOrders }: { orders: Order[]; setOrders: React.Di
                 value={safeOrder.status || 'pending'}
                 onChange={(e) => handleStatusChange(orderId, e.target.value as Order['status'])}
                 className={cn(
-                  'text-sm font-medium px-3 py-1.5 rounded-md border-2 cursor-pointer',
+                  'min-h-11 text-sm font-medium px-3 py-2 rounded-md border-2 cursor-pointer',
                   safeOrder.status === 'delivered'
                     ? 'border-green-600 text-green-700 bg-green-50'
                     : safeOrder.status === 'cancelled'
@@ -673,6 +693,7 @@ function OrdersTab({ orders, setOrders }: { orders: Order[]; setOrders: React.Di
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
+              {safeOrder.status !== 'cancelled' && <button type="button" onClick={() => handleCancel(orderId)} className="min-h-11 px-4 py-2 rounded-md text-sm font-medium text-red-700 border border-red-200 hover:bg-red-50">Cancel order</button>}
             </div>
           </div>
           );
