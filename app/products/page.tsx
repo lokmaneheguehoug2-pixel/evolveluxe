@@ -6,25 +6,25 @@ export const dynamic = 'force-dynamic';
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: { category?: string; sale?: string; search?: string };
+  searchParams: Promise<{ category?: string; sale?: string; search?: string }>;
 }) {
+  const params = await searchParams;
+  const category = typeof params?.category === 'string' ? params.category : undefined;
+  const sale = params?.sale === 'true';
+  const search = typeof params?.search === 'string' ? params.search : undefined;
   const [categories, products] = await Promise.all([
-    getCategories(),
-    getProducts({
-      category: searchParams.category,
-      onSale: searchParams.sale === 'true',
-      search: searchParams.search,
-    }),
+    getCategories().catch(() => []),
+    getProducts({ category, onSale: sale, search }).catch(() => []),
   ]);
 
   return (
     <div className="pt-[100px]">
       <ProductsView
-        products={products}
-        categories={categories}
-        activeCategory={searchParams.category}
-        activeSale={searchParams.sale === 'true'}
-        searchQuery={searchParams.search}
+        products={Array.isArray(products) ? products : []}
+        categories={Array.isArray(categories) ? categories : []}
+        activeCategory={category}
+        activeSale={sale}
+        searchQuery={search}
       />
     </div>
   );

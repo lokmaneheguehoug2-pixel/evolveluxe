@@ -36,7 +36,7 @@ export default function CartPage() {
                 key={`${item.productId}-${item.variantColor}-${item.variantSize}-${idx}`}
                 className="flex gap-4 bg-champagne-100 rounded-lg p-4"
               >
-                <Link href={`/products/${item.slug || item.productId}`} className="shrink-0">
+                <Link href={`/product/${item.slug || item.productId}`} className="shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={item.image}
@@ -46,7 +46,7 @@ export default function CartPage() {
                 </Link>
                 <div className="flex-1">
                   <Link
-                    href={`/products/${item.slug || item.productId}`}
+                    href={`/product/${item.slug || item.productId}`}
                     className="font-serif text-lg text-burgundy-700 hover:text-burgundy-600"
                   >
                     {item.name}

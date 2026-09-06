@@ -87,7 +87,7 @@ export function SearchOverlay() {
               {results.map((product) => (
                 <Link
                   key={product.id}
-                  href={`/products/${product.slug || product.id}`}
+                  href={`/product/${product.slug || product.id}`}
                   onClick={close}
                   className="flex items-center gap-4 p-3 rounded-lg hover:bg-white/60 transition-colors group"
                 >
