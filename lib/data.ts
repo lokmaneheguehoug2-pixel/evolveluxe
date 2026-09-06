@@ -96,9 +96,9 @@ function snapToCoupon(d: DocumentData): Coupon {
   };
 }
 
-function snapToOrder(d: DocumentData, items?: Order['order_items']): Order {
+function snapToOrder(d: DocumentData, items?: Order['order_items'], documentId?: string): Order {
   return {
-    id: d.id,
+    id: documentId || d.id || '',
     user_id: d.user_id ?? null,
     full_name: d.full_name,
     phone: d.phone,
@@ -201,7 +201,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     const snap = await getDocs(q);
     if (snap.empty) return null;
     const data = snap.docs[0].data();
-    const product = snapToProduct(data);
+    const product = snapToProduct({ ...data, id: snap.docs[0].id });
 
     // Fetch category
     if (product.category_id) {
@@ -248,7 +248,7 @@ export async function getProductById(id: string): Promise<Product | null> {
     const ref = doc(db, 'products', id);
     const snap = await getDoc(ref);
     if (!snap.exists()) return null;
-    const product = snapToProduct(snap.data());
+    const product = snapToProduct({ ...snap.data(), id: snap.id });
     if (product.category_id) {
       const cats = await getCategories();
       product.category = cats.find((c) => c.id === product.category_id);
@@ -271,7 +271,7 @@ export async function getRelatedProducts(
       fbLimit(limitCount + 1)
     );
     const snap = await getDocs(q);
-    let products = snap.docs.map((d) => snapToProduct(d.data()));
+    let products = snap.docs.map((d) => snapToProduct({ ...d.data(), id: d.id }));
     products = products.filter((p) => p.id !== excludeId).slice(0, limitCount);
 
     const cats = await getCategories();
@@ -438,7 +438,7 @@ export async function getOrders(): Promise<Order[]> {
       } catch {
         // items subcollection may not exist
       }
-      orders.push(snapToOrder(data, items));
+      orders.push(snapToOrder(data, items, orderDoc.id));
     }
     // Sort by created_at descending
     orders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -453,6 +453,7 @@ export async function updateOrderStatus(
   status: Order['status']
 ): Promise<{ error: string | null }> {
   try {
+    if (!orderId || orderId === 'unknown') return { error: 'This order is missing its Firestore ID.' };
     await updateDoc(doc(db, 'orders', orderId), {
       status,
       updated_at: serverTimestamp(),
