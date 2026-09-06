@@ -83,7 +83,7 @@ export function WishlistDrawer() {
                 className="flex gap-4 bg-white/40 rounded-lg p-3 border border-burgundy/5"
               >
                 <Link
-                  href={`/products/${item.slug}`}
+                  href={`/products/${item.slug || item.productId}`}
                   onClick={close}
                   className="shrink-0"
                 >
@@ -96,7 +96,7 @@ export function WishlistDrawer() {
                 </Link>
                 <div className="flex-1 min-w-0">
                   <Link
-                    href={`/products/${item.slug}`}
+                    href={`/products/${item.slug || item.productId}`}
                     onClick={close}
                     className="font-serif text-burgundy-700 hover:text-burgundy-600 transition-colors line-clamp-1"
                   >

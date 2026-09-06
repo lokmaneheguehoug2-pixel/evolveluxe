@@ -36,7 +36,8 @@ export default function CheckoutPage() {
 
   const shippingPromotionActive = Boolean(shippingSettings?.free_shipping_enabled && (!shippingSettings.free_shipping_until || new Date(shippingSettings.free_shipping_until) >= new Date()));
   const selectedWilaya = WILAYAS.find((wilaya) => wilaya.name === form.wilaya);
-  const shippingCost = shippingPromotionActive ? 0 : getWilayaRate(shippingSettings?.wilaya_shipping_rates, selectedWilaya?.code, form.shipping_method === 'office' ? 'desk' : 'home');
+  const shippingCostFor = (method: 'home' | 'office') => getWilayaRate(shippingSettings?.wilaya_shipping_rates, selectedWilaya?.code, method === 'office' ? 'desk' : 'home');
+  const shippingCost = shippingPromotionActive ? 0 : shippingCostFor(form.shipping_method);
   const total = subtotal - discount + shippingCost;
   const loyaltyPoints = calculateLoyaltyPoints(total);
 
@@ -158,8 +159,8 @@ export default function CheckoutPage() {
               <div className="md:col-span-2">
                 <label className="luxe-label">Delivery Method *</label>
                 <select required value={form.shipping_method} onChange={(e) => setForm({ ...form, shipping_method: e.target.value as 'home' | 'office' })} className="luxe-input cursor-pointer">
-                  <option value="home">Livraison à Domicile — {formatPrice(shippingPromotionActive ? 0 : (shippingSettings?.home_delivery_rate ?? 700))}</option>
-                  <option value="office">Livraison Stop Desk — {formatPrice(shippingPromotionActive ? 0 : (shippingSettings?.office_delivery_rate ?? 400))}</option>
+                  <option value="home">Livraison à Domicile — {formatPrice(shippingPromotionActive ? 0 : shippingCostFor('home'))}</option>
+                  <option value="office">Livraison Stop Desk — {formatPrice(shippingPromotionActive ? 0 : shippingCostFor('office'))}</option>
                 </select>
               </div>
               <div className="md:col-span-2">

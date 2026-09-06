@@ -18,10 +18,19 @@ export const WILAYAS: Wilaya[] = [
   ['51', 'Ouled Djellal', 'أولاد جلال'], ['52', 'Béni Abbès', 'بني عباس'], ['53', 'In Salah', 'عين صالح'], ['54', 'In Guezzam', 'عين قزام'], ['55', 'Touggourt', 'تقرت'], ['56', 'Djanet', 'جانت'], ['57', "El M'Ghair", 'المغير'], ['58', 'El Meniaa', 'المنيعة'],
 ].map(([code, name, nameAr]) => ({ code, name, nameAr }));
 
-export const DEFAULT_WILAYA_RATE: WilayaRate = { home: 700, desk: 400 };
+const MATRIX_RATES: Record<string, WilayaRate> = {
+  '01': { home: 1650, desk: 1550 }, '02': { home: 700, desk: 600 }, '03': { home: 850, desk: 700 }, '04': { home: 550, desk: 450 }, '05': { home: 700, desk: 600 }, '06': { home: 700, desk: 600 }, '07': { home: 850, desk: 700 }, '08': { home: 1650, desk: 1550 }, '09': { home: 700, desk: 600 }, '10': { home: 700, desk: 600 },
+  '11': { home: 1650, desk: 1550 }, '12': { home: 700, desk: 600 }, '13': { home: 700, desk: 600 }, '14': { home: 700, desk: 600 }, '15': { home: 700, desk: 600 }, '16': { home: 550, desk: 450 }, '17': { home: 850, desk: 700 }, '18': { home: 550, desk: 450 }, '19': { home: 700, desk: 600 }, '20': { home: 700, desk: 600 },
+  '21': { home: 550, desk: 450 }, '22': { home: 700, desk: 600 }, '23': { home: 700, desk: 600 }, '24': { home: 550, desk: 450 }, '25': { home: 500, desk: 400 }, '26': { home: 700, desk: 600 }, '27': { home: 700, desk: 600 }, '28': { home: 700, desk: 600 }, '29': { home: 700, desk: 600 }, '30': { home: 850, desk: 700 },
+  '31': { home: 700, desk: 600 }, '32': { home: 1650, desk: 1550 }, '33': { home: 1650, desk: 1550 }, '34': { home: 700, desk: 600 }, '35': { home: 700, desk: 600 }, '36': { home: 700, desk: 600 }, '37': { home: 1650, desk: 1550 }, '38': { home: 700, desk: 600 }, '39': { home: 850, desk: 700 }, '40': { home: 700, desk: 600 },
+  '41': { home: 700, desk: 600 }, '42': { home: 700, desk: 600 }, '43': { home: 550, desk: 450 }, '44': { home: 700, desk: 600 }, '45': { home: 1650, desk: 1550 }, '46': { home: 700, desk: 600 }, '47': { home: 850, desk: 700 }, '48': { home: 700, desk: 600 }, '49': { home: 1650, desk: 1550 }, '50': { home: 1650, desk: 1550 },
+  '51': { home: 850, desk: 700 }, '52': { home: 1650, desk: 1550 }, '53': { home: 1650, desk: 1550 }, '54': { home: 1650, desk: 1550 }, '55': { home: 850, desk: 700 }, '56': { home: 1650, desk: 1550 }, '57': { home: 850, desk: 700 }, '58': { home: 850, desk: 700 },
+};
+
+export const DEFAULT_WILAYA_RATE: WilayaRate = { home: 700, desk: 600 };
 
 export function createDefaultWilayaRates(): Record<string, WilayaRate> {
-  return Object.fromEntries(WILAYAS.map(({ code }) => [code, { ...DEFAULT_WILAYA_RATE }]));
+  return Object.fromEntries(WILAYAS.map(({ code }) => [code, MATRIX_RATES[code] ?? { ...DEFAULT_WILAYA_RATE }]));
 }
 
 export function normalizeWilayaRates(value: unknown): Record<string, WilayaRate> {
@@ -30,7 +39,8 @@ export function normalizeWilayaRates(value: unknown): Record<string, WilayaRate>
     const candidate = source[code] && typeof source[code] === 'object' ? source[code] as Record<string, unknown> : {};
     const home = Number(candidate.home);
     const desk = Number(candidate.desk);
-    return [code, { home: Number.isFinite(home) && home >= 0 ? home : DEFAULT_WILAYA_RATE.home, desk: Number.isFinite(desk) && desk >= 0 ? desk : DEFAULT_WILAYA_RATE.desk }];
+    const fallback = MATRIX_RATES[code] ?? DEFAULT_WILAYA_RATE;
+    return [code, { home: Number.isFinite(home) && home >= 0 ? home : fallback.home, desk: Number.isFinite(desk) && desk >= 0 ? desk : fallback.desk }];
   }));
 }
 
