@@ -133,7 +133,7 @@ export async function getCategories(): Promise<Category[]> {
   try {
     const q = query(collection(db, 'categories'), orderBy('name'));
     const snap = await getDocs(q);
-    return snap.docs.map((d) => snapToCategory(d.data()));
+    return snap.docs.map((d) => snapToCategory({ id: d.id, ...d.data() }));
   } catch {
     return [];
   }

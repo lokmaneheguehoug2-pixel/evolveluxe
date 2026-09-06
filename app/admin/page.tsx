@@ -22,6 +22,7 @@ import {
   Package,
   ShoppingCart,
   Tag,
+  FolderOpen,
   TrendingUp,
   Users,
   DollarSign,
@@ -37,8 +38,9 @@ import {
 import { cn } from '@/lib/utils';
 import { SettingsTab } from '@/components/admin/settings-tab';
 import { AdminErrorBoundary } from '@/components/admin/admin-error-boundary';
+import { CategoriesTab } from '@/components/admin/categories-tab';
 
-type Tab = 'overview' | 'products' | 'orders' | 'coupons' | 'settings';
+type Tab = 'overview' | 'products' | 'categories' | 'orders' | 'coupons' | 'settings';
 
 const MAX_IMAGE_BYTES = 95 * 1024;
 const MAX_IMAGES_BYTES = 800 * 1024;
@@ -155,6 +157,7 @@ function AdminDashboard() {
           {[
             { id: 'overview' as const, label: 'Overview', icon: LayoutDashboard },
             { id: 'products' as const, label: 'Products', icon: Package },
+            { id: 'categories' as const, label: 'Categories', icon: FolderOpen },
             { id: 'orders' as const, label: 'Orders', icon: ShoppingCart },
             { id: 'coupons' as const, label: 'Coupons', icon: Tag },
             { id: 'settings' as const, label: 'Store Settings', icon: Settings },
@@ -209,6 +212,7 @@ function AdminDashboard() {
             {tab === 'products' && (
               <ProductsTab products={safeProducts} categories={Array.isArray(categories) ? categories.filter(Boolean) : []} setProducts={setProducts} />
             )}
+            {tab === 'categories' && <CategoriesTab categories={categories} setCategories={setCategories} />}
             {tab === 'orders' && <OrdersTab orders={safeOrders} setOrders={setOrders} />}
             {tab === 'coupons' && <CouponsTab coupons={coupons} setCoupons={setCoupons} />}
             {tab === 'settings' && <SettingsTab settings={settings ?? defaultStoreSettings} onSaved={setSettings} />}

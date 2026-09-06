@@ -36,7 +36,7 @@ export function ProductsView({
     if (selectedCategory) {
       const cat = categories.find((c) => c.slug === selectedCategory);
       if (cat) {
-        result = result.filter((p) => p.category_id === cat.id);
+        result = result.filter((p) => p.category_id === cat.id || p.category_id === cat.slug || p.category?.id === cat.id || p.category?.slug === cat.slug);
       }
     }
 
