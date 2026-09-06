@@ -7,6 +7,16 @@ export type Category = {
   created_at: string;
 };
 
+export type StoreSettings = {
+  phone: string;
+  email: string;
+  address: string;
+  description: string;
+  instagram: string;
+  tiktok: string;
+  facebook: string;
+};
+
 export type Product = {
   id: string;
   name: string;

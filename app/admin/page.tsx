@@ -14,8 +14,8 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getCategories, getProducts, getOrders, getAllCoupons, updateOrderStatus, formatPrice, calculateLoyaltyPoints } from '@/lib/data';
-import type { Product, Order, Coupon, Category } from '@/lib/types';
+import { getCategories, getProducts, getOrders, getAllCoupons, getStoreSettings, updateOrderStatus, formatPrice, calculateLoyaltyPoints } from '@/lib/data';
+import type { Product, Order, Coupon, Category, StoreSettings } from '@/lib/types';
 import { toast } from 'sonner';
 import {
   LayoutDashboard,
@@ -32,10 +32,12 @@ import {
   Loader2,
   Eye,
   LogOut,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SettingsTab } from '@/components/admin/settings-tab';
 
-type Tab = 'overview' | 'products' | 'orders' | 'coupons';
+type Tab = 'overview' | 'products' | 'orders' | 'coupons' | 'settings';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -45,6 +47,7 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [settings, setSettings] = useState<StoreSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,16 +58,18 @@ export default function AdminPage() {
     }
 
     (async () => {
-      const [p, o, c, cat] = await Promise.all([
+      const [p, o, c, cat, storeSettings] = await Promise.all([
         getProducts(),
         getOrders(),
         getAllCoupons(),
         getCategories(),
+        getStoreSettings(),
       ]);
       setProducts(p);
       setOrders(o);
       setCoupons(c);
       setCategories(cat);
+      setSettings(storeSettings);
       setLoading(false);
     })();
   }, [hydrated, router, user]);
@@ -100,6 +105,7 @@ export default function AdminPage() {
             { id: 'products' as const, label: 'Products', icon: Package },
             { id: 'orders' as const, label: 'Orders', icon: ShoppingCart },
             { id: 'coupons' as const, label: 'Coupons', icon: Tag },
+            { id: 'settings' as const, label: 'Store Settings', icon: Settings },
           ].map((item) => (
             <button
               key={item.id}
@@ -152,6 +158,7 @@ export default function AdminPage() {
             )}
             {tab === 'orders' && <OrdersTab orders={orders} setOrders={setOrders} />}
             {tab === 'coupons' && <CouponsTab coupons={coupons} setCoupons={setCoupons} />}
+            {tab === 'settings' && settings && <SettingsTab settings={settings} onSaved={setSettings} />}
           </>
         )}
       </main>
@@ -412,11 +419,24 @@ function ProductForm({
     is_on_sale: product?.is_on_sale || false,
   });
   const [saving, setSaving] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>(product?.images || []);
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const previews = await Promise.all(Array.from(files).map((file) => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    })));
+    setImageUrls((current) => [...current, ...previews]);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const images = form.images.split('\n').map((s) => s.trim()).filter(Boolean);
+    const typedImages = form.images.split('\n').map((s) => s.trim()).filter(Boolean);
+    const images = Array.from(new Set([...imageUrls, ...typedImages]));
     const slug = form.slug || form.name.toLowerCase().replace(/\s+/g, '-');
     const payload = {
       name: form.name,
@@ -511,7 +531,18 @@ function ProductForm({
               <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} className="luxe-input" />
             </div>
             <div className="md:col-span-2">
-              <label className="luxe-label">Image URLs (one per line)</label>
+              <label className="luxe-label">Product Images</label>
+              <input type="file" accept="image/*" multiple onChange={(e) => void handleFiles(e.target.files)} className="luxe-input file:mr-3 file:border-0 file:bg-burgundy-700 file:px-3 file:py-2 file:text-champagne-50" />
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mt-3">
+                {imageUrls.map((image, index) => (
+                  <div key={`${image.slice(0, 20)}-${index}`} className="relative aspect-square rounded overflow-hidden bg-burgundy/5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={image} alt={`Product preview ${index + 1}`} className="h-full w-full object-cover" />
+                    <button type="button" aria-label={`Remove image ${index + 1}`} onClick={() => setImageUrls(imageUrls.filter((_, imageIndex) => imageIndex !== index))} className="absolute top-1 right-1 rounded-full bg-burgundy-700 text-champagne-50 p-1"><X className="h-3 w-3" /></button>
+                  </div>
+                ))}
+              </div>
+              <label className="luxe-label mt-4">Image URLs (one per line)</label>
               <textarea value={form.images} onChange={(e) => setForm({ ...form, images: e.target.value })} className="luxe-input min-h-[80px]" placeholder="https://..." />
             </div>
             <div className="md:col-span-2">
