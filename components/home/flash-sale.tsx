@@ -90,7 +90,7 @@ export function FlashSale({ products }: { products: Product[] }) {
             {products.map((product) => (
               <Link
                 key={product.id}
-                href={`/products/${product.slug}`}
+                href={`/product/${product.slug || product.id}`}
                 className="group block bg-champagne-200 rounded-lg overflow-hidden"
               >
                 <div className="relative aspect-square overflow-hidden">

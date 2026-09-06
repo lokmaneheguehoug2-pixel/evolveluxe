@@ -325,7 +325,7 @@ export default function AccountPage() {
           ) : (
             wishlistItems.map((item) => (
               <div key={item.productId} className="bg-champagne-100 rounded-lg p-4 flex gap-4">
-                <Link href={`/products/${item.slug || item.productId}`}>
+                <Link href={`/product/${item.slug || item.productId}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={item.image}
@@ -335,7 +335,7 @@ export default function AccountPage() {
                 </Link>
                 <div className="flex-1">
                   <Link
-                    href={`/products/${item.slug || item.productId}`}
+                    href={`/product/${item.slug || item.productId}`}
                     className="font-serif text-burgundy-700 hover:text-burgundy-600 line-clamp-1"
                   >
                     {item.name}

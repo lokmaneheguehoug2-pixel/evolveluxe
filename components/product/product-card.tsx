@@ -50,13 +50,13 @@ export function ProductCard({ product }: { product: Product }) {
   };
 
   return (
-    <Link href={`/products/${product.slug || product.id}`} className="group block">
+    <Link href={`/product/${product.slug || product.id}`} className="group block">
       <div className="luxe-card relative">
         {/* Image */}
         <div className="relative aspect-square overflow-hidden bg-champagne-100">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={product.images[0]}
+            src={product.images?.[0] || '/placeholder.svg'}
             alt={product.name}
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
             loading="lazy"
