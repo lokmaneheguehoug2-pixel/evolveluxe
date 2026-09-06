@@ -243,6 +243,11 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   }
 }
 
+export async function getProductBySlugOrId(value: string): Promise<Product | null> {
+  const byId = await getProductById(value);
+  return byId || getProductBySlug(value);
+}
+
 export async function getProductById(id: string): Promise<Product | null> {
   try {
     const ref = doc(db, 'products', id);
