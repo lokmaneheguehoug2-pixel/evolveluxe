@@ -47,34 +47,42 @@ export async function getStoreSettings(): Promise<StoreSettings> {
 
 export { defaultStoreSettings };
 
-function snapToCategory(d: DocumentData): Category {
+function asString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+function snapToCategory(d: DocumentData = {}): Category {
   return {
-    id: d.id,
-    name: d.name,
-    slug: d.slug,
-    description: d.description ?? null,
-    image_url: d.image_url ?? null,
+    id: asString(d.id),
+    name: asString(d.name, 'Uncategorized'),
+    slug: asString(d.slug, asString(d.name).toLowerCase().replace(/\s+/g, '-')),
+    description: d.description == null ? null : asString(d.description),
+    image_url: d.image_url == null ? null : asString(d.image_url),
     created_at: d.created_at instanceof Timestamp ? d.created_at.toDate().toISOString() : d.created_at ?? new Date().toISOString(),
   };
 }
 
-function snapToProduct(d: DocumentData, category?: Category): Product {
+function snapToProduct(d: DocumentData = {}, category?: Category): Product {
   return {
-    id: d.id,
-    name: d.name,
-    slug: d.slug,
-    description: d.description ?? null,
+    id: asString(d.id),
+    name: asString(d.name, 'Untitled product'),
+    slug: asString(d.slug, asString(d.id)),
+    description: d.description == null ? null : asString(d.description),
     price: Number(d.price ?? 0),
     original_price: d.original_price != null ? Number(d.original_price) : null,
-    category_id: d.category_id ?? null,
-    images: d.images ?? [],
-    video_url: d.video_url ?? null,
+    category_id: d.category_id == null ? null : asString(d.category_id),
+    images: asStringArray(d.images),
+    video_url: d.video_url == null ? null : asString(d.video_url),
     stock: Number(d.stock ?? 0),
     is_featured: d.is_featured ?? false,
     is_on_sale: d.is_on_sale ?? false,
     rating: Number(d.rating ?? 0),
     review_count: Number(d.review_count ?? 0),
-    tags: d.tags ?? [],
+    tags: asStringArray(d.tags),
     created_at: d.created_at instanceof Timestamp ? d.created_at.toDate().toISOString() : d.created_at ?? new Date().toISOString(),
     updated_at: d.updated_at instanceof Timestamp ? d.updated_at.toDate().toISOString() : d.updated_at ?? new Date().toISOString(),
     category,

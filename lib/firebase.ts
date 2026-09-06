@@ -1,5 +1,6 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { getAuth, type Auth } from 'firebase/auth'
+import type { Firestore } from 'firebase/firestore'
 import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
@@ -12,14 +13,43 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || 'G-Y439BT9BC4',
 }
 
-let app: FirebaseApp
-try {
-  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
-} catch (error) {
-  console.warn('[v0] Firebase app initialization failed; using fallback configuration', error)
-  app = initializeApp({ ...firebaseConfig, apiKey: 'fallback-runtime-key' }, 'fallback-runtime-app')
+const fallbackConfig = {
+  ...firebaseConfig,
+  apiKey: firebaseConfig.apiKey || 'development-fallback-key',
 }
 
-export const auth = getAuth(app)
-export const db = getFirestore(app)
+function getFirebaseApp(): FirebaseApp {
+  try {
+    return getApps()[0] ?? initializeApp(firebaseConfig)
+  } catch (error) {
+    console.warn('[v0] Firebase initialization failed; using fallback app', error)
+    try {
+      return getApps().find((candidate) => candidate.name === 'fallback-runtime-app') ?? initializeApp(fallbackConfig, 'fallback-runtime-app')
+    } catch (fallbackError) {
+      console.warn('[v0] Firebase fallback initialization failed', fallbackError)
+      return initializeApp({ ...fallbackConfig, apiKey: 'fallback-runtime-key' }, 'last-resort-runtime-app')
+    }
+  }
+}
+
+const app = getFirebaseApp()
+
+export const auth = (() => {
+  try {
+    return getAuth(app)
+  } catch (error) {
+    console.warn('[v0] Firebase Auth unavailable', error)
+    return null
+  }
+})() as Auth
+
+export const db = (() => {
+  try {
+    return getFirestore(app)
+  } catch (error) {
+    console.warn('[v0] Firestore unavailable', error)
+    return null
+  }
+})() as Firestore
+
 export { app }
