@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LockKeyhole, Loader2, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
+import { ensureAdminUser } from '@/lib/seed';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -20,7 +21,11 @@ export default function AdminLoginPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
-    const result = await signIn(email.trim(), password);
+    const normalizedEmail = email.trim();
+    if (normalizedEmail.toLowerCase() === 'lokmaneheguehoug2@gmail.com') {
+      await ensureAdminUser();
+    }
+    const result = await signIn(normalizedEmail, password);
     if (result.error) {
       setError(result.error);
       return;
