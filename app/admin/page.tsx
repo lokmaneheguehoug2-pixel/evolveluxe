@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useAuthStore } from '@/lib/stores/auth-store';
 import {
   collection,
   getDocs,
@@ -28,12 +31,15 @@ import {
   X,
   Loader2,
   Eye,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Tab = 'overview' | 'products' | 'orders' | 'coupons';
 
 export default function AdminPage() {
+  const router = useRouter();
+  const { user, hydrated, signOut } = useAuthStore();
   const [tab, setTab] = useState<Tab>('overview');
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -42,6 +48,12 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!hydrated) return;
+    if (!user || user.role !== 'admin') {
+      router.replace('/admin/login');
+      return;
+    }
+
     (async () => {
       const [p, o, c, cat] = await Promise.all([
         getProducts(),
@@ -55,7 +67,15 @@ export default function AdminPage() {
       setCategories(cat);
       setLoading(false);
     })();
-  }, []);
+  }, [hydrated, router, user]);
+
+  if (!hydrated || !user || user.role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-burgundy-700 flex items-center justify-center text-champagne-200">
+        <Loader2 className="h-7 w-7 animate-spin" aria-label="Checking administrator access" />
+      </div>
+    );
+  }
 
   const totalRevenue = orders
     .filter((o) => o.status !== 'cancelled')
@@ -95,10 +115,17 @@ export default function AdminPage() {
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t border-champagne-400/10">
-          <a href="/" className="text-champagne-200/70 hover:text-champagne-200 text-sm flex items-center gap-2">
+        <div className="p-4 border-t border-champagne-400/10 flex flex-col gap-3">
+          <Link href="/" className="text-champagne-200/70 hover:text-champagne-200 text-sm flex items-center gap-2">
             <Eye className="h-4 w-4" /> View Store
-          </a>
+          </Link>
+          <button
+            type="button"
+            onClick={() => void signOut().then(() => router.replace('/admin/login'))}
+            className="text-champagne-200/70 hover:text-champagne-200 text-sm flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
         </div>
       </aside>
 
