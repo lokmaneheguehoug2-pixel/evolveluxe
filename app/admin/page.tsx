@@ -150,7 +150,7 @@ function AdminDashboard() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 ml-20 sm:ml-64 p-4 sm:p-8 min-w-0 overflow-x-hidden">
+      <main className="flex-1 ml-20 sm:ml-64 p-4 pb-24 sm:pb-8 sm:p-8 min-w-0 overflow-x-hidden">
         {loading ? (
           <div className="flex items-center justify-center min-h-[60vh]">
             <Loader2 className="h-8 w-8 animate-spin text-burgundy-700" />
@@ -318,15 +318,23 @@ function ProductsTab({
   const [editing, setEditing] = useState<Product | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  const handleDelete = async (id: string) => {
-    if (!id) {
-      toast.error('This product is missing its Firestore ID.');
+  const handleDelete = async (product: Product) => {
+    const legacyProduct = product as Product & { _id?: string };
+    const firestoreId = product?.id || legacyProduct._id;
+    const localKey = firestoreId || product?.slug || product?.name;
+    if (!confirm('Delete this product?')) return;
+    if (!firestoreId) {
+      setProducts((current) => current.filter((item) => {
+        const itemLegacy = item as Product & { _id?: string };
+        const itemKey = item?.id || itemLegacy._id || item?.slug || item?.name;
+        return itemKey !== localKey;
+      }));
+      toast.success('Product removed from the dashboard');
       return;
     }
-    if (!confirm('Delete this product?')) return;
     try {
-      await deleteDoc(doc(db, 'products', id));
-      setProducts(products.filter((p) => p?.id !== id));
+      await deleteDoc(doc(db, 'products', firestoreId));
+      setProducts((current) => current.filter((p) => p?.id !== firestoreId));
       toast.success('Product deleted');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete');
@@ -390,7 +398,7 @@ function ProductsTab({
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(p.id)}
+                    onClick={() => handleDelete(p)}
                     className="p-2 text-burgundy/60 hover:text-red-600 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -407,7 +415,7 @@ function ProductsTab({
           return <div key={p?.id || p?.slug} className="bg-champagne-100 rounded-lg p-4 flex gap-3">
             {image ? <img src={image} alt={p?.name || 'Product'} className="h-16 w-16 rounded object-cover shrink-0" /> : <div className="h-16 w-16 rounded bg-burgundy/10 shrink-0" />}
             <div className="min-w-0 flex-1"><p className="font-medium text-burgundy-700 truncate">{p?.name || 'Untitled product'}</p><p className="text-sm text-burgundy/60">{formatPrice(Number(p?.price) || 0)} · Stock {Number(p?.stock) || 0}</p><p className="text-xs text-burgundy/50">{p?.category?.name || 'Uncategorized'}</p></div>
-            <div className="flex items-center gap-1"><button type="button" aria-label="Edit product" onClick={() => { setEditing(p); setShowForm(true); }} className="min-h-11 min-w-11 p-3 text-burgundy/70"><Pencil className="h-5 w-5" /></button><button type="button" aria-label="Delete product" onClick={() => handleDelete(p?.id || '')} className="min-h-11 min-w-11 p-3 text-red-600"><Trash2 className="h-5 w-5" /></button></div>
+            <div className="flex items-center gap-1"><button type="button" aria-label="Edit product" onClick={() => { setEditing(p); setShowForm(true); }} className="min-h-11 min-w-11 p-3 text-burgundy/70"><Pencil className="h-5 w-5" /></button><button type="button" aria-label="Delete product" onClick={() => handleDelete(p)} className="min-h-11 min-w-11 p-3 text-red-600"><Trash2 className="h-5 w-5" /></button></div>
           </div>;
         })}
       </div>
