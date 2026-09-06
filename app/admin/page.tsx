@@ -14,7 +14,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getCategories, getProducts, getOrders, getAllCoupons, getStoreSettings, updateOrderStatus, formatPrice, calculateLoyaltyPoints } from '@/lib/data';
+import { getCategories, getProducts, getOrders, getAllCoupons, getStoreSettings, defaultStoreSettings, updateOrderStatus, formatPrice, calculateLoyaltyPoints } from '@/lib/data';
 import type { Product, Order, Coupon, Category, StoreSettings } from '@/lib/types';
 import { toast } from 'sonner';
 import {
@@ -173,7 +173,7 @@ function AdminDashboard() {
             )}
             {tab === 'orders' && <OrdersTab orders={safeOrders} setOrders={setOrders} />}
             {tab === 'coupons' && <CouponsTab coupons={coupons} setCoupons={setCoupons} />}
-            {tab === 'settings' && settings && <SettingsTab settings={settings} onSaved={setSettings} />}
+            {tab === 'settings' && <SettingsTab settings={settings ?? defaultStoreSettings} onSaved={setSettings} />}
           </>
         )}
       </main>
@@ -613,40 +613,44 @@ function OrdersTab({ orders, setOrders }: { orders: Order[]; setOrders: React.Di
     <div>
       <h1 className="font-serif text-3xl text-burgundy-700 mb-8">Orders</h1>
       <div className="space-y-4">
-        {orders.map((order) => (
-          <div key={order.id} className="bg-champagne-100 rounded-lg p-6">
+        {orders.map((order) => {
+          const safeOrder = order ?? ({} as Order);
+          const orderId = safeOrder.id || 'unknown';
+          const orderItems = Array.isArray(safeOrder.order_items) ? safeOrder.order_items.filter(Boolean) : [];
+          return (
+          <div key={orderId} className="bg-champagne-100 rounded-lg p-6">
             <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
               <div>
-                <p className="font-serif text-lg text-burgundy-700">Order #{order.id.slice(0, 8)}</p>
+                <p className="font-serif text-lg text-burgundy-700">Order #{orderId.slice(0, 8)}</p>
                 <p className="text-sm text-burgundy/50">
-                  {new Date(order.created_at).toLocaleString()}
+                  {safeOrder.created_at ? new Date(safeOrder.created_at).toLocaleString() : 'N/A'}
                 </p>
                 <p className="text-sm text-burgundy/70 mt-1">
-                  {order.full_name} · {order.phone} · {order.wilaya}
+                  {safeOrder.full_name || 'N/A'} · {safeOrder.phone || 'N/A'} · {safeOrder.wilaya || 'N/A'}
                 </p>
-                <p className="text-sm text-burgundy/50">{order.address}</p>
+                <p className="text-sm text-burgundy/50">{safeOrder.address || 'N/A'}</p>
               </div>
               <div className="text-right">
-                <p className="font-serif text-xl text-burgundy-700">{formatPrice(Number(order.total))}</p>
-                {Number(order.discount) > 0 && (
-                  <p className="text-xs text-green-600">Saved {formatPrice(Number(order.discount))}</p>
+                <p className="font-serif text-xl text-burgundy-700">{formatPrice(Number(safeOrder.total) || 0)}</p>
+                {Number(safeOrder.discount) > 0 && (
+                  <p className="text-xs text-green-600">Saved {formatPrice(Number(safeOrder.discount) || 0)}</p>
                 )}
                 <p className="text-xs text-burgundy/50">
-                  {order.loyalty_points_earned} points earned
+                  {Number(safeOrder.loyalty_points_earned) || 0} points earned
                 </p>
               </div>
             </div>
 
             <div className="space-y-2 mb-4">
-              {order.order_items?.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 text-sm">
+              {orderItems.map((item) => (
+                <div key={item?.id || `${orderId}-${item?.product_id || 'item'}`} className="flex items-center gap-3 text-sm">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {item.product_image && (
-                    <img src={item.product_image} alt={item.product_name} className="h-10 w-10 rounded object-cover" />
+                  {item?.product_image && (
+                    <img src={item.product_image} alt={item.product_name || 'Product'} className="h-10 w-10 rounded object-cover" />
                   )}
-                  <span className="text-burgundy/70">{item.product_name}</span>
-                  <span className="text-burgundy/50">× {item.quantity}</span>
-                  <span className="text-burgundy-700 font-medium ml-auto">{formatPrice(Number(item.unit_price) * item.quantity)}</span>
+                  <span className="text-burgundy/70">{item?.product_name || 'Product'}</span>
+                  <span className="text-burgundy/50">× {Number(item?.quantity) || 0}</span>
+                  <span className="text-burgundy-700 font-medium ml-auto">{formatPrice((Number(item?.unit_price) || 0) * (Number(item?.quantity) || 0))}</span>
                 </div>
               ))}
             </div>
@@ -654,13 +658,13 @@ function OrdersTab({ orders, setOrders }: { orders: Order[]; setOrders: React.Di
             <div className="flex items-center gap-2 pt-4 border-t border-burgundy/10">
               <span className="text-sm text-burgundy/60 uppercase tracking-wider">Status:</span>
               <select
-                value={order.status}
-                onChange={(e) => handleStatusChange(order.id, e.target.value as Order['status'])}
+                value={safeOrder.status || 'pending'}
+                onChange={(e) => handleStatusChange(orderId, e.target.value as Order['status'])}
                 className={cn(
                   'text-sm font-medium px-3 py-1.5 rounded-md border-2 cursor-pointer',
-                  order.status === 'delivered'
+                  safeOrder.status === 'delivered'
                     ? 'border-green-600 text-green-700 bg-green-50'
-                    : order.status === 'cancelled'
+                    : safeOrder.status === 'cancelled'
                     ? 'border-red-600 text-red-700 bg-red-50'
                     : 'border-burgundy/20 text-burgundy-700'
                 )}
@@ -671,7 +675,8 @@ function OrdersTab({ orders, setOrders }: { orders: Order[]; setOrders: React.Di
               </select>
             </div>
           </div>
-        ))}
+          );
+        })}
         {orders.length === 0 && (
           <p className="text-center text-burgundy/50 py-20">No orders yet.</p>
         )}

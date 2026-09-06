@@ -6,17 +6,9 @@ import { CheckCircle2, Tag, Loader2, Sparkles } from 'lucide-react';
 import { useCartStore } from '@/lib/stores/cart-store';
 import { validateCoupon, createOrder, formatPrice, calculateLoyaltyPoints, getStoreSettings } from '@/lib/data';
 import type { StoreSettings } from '@/lib/types';
+import { WILAYAS, getWilayaRate } from '@/lib/wilayas';
 import { toast } from 'sonner';
 import Link from 'next/link';
-
-const WILAYAS = [
-  'Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Bejaia','Biskra','Bechar','Blida','Bouira',
-  'Tamanrasset','Tebessa','Tlemcen','Tiaret','Tizi Ouzou','Alger','Djelfa','Jijel','Setif','Saida',
-  'Skikda','Sidi Bel Abbes','Annaba','Guelma','Constantine','Medea','Mostaganem','MSila','Mascara','Ouargla',
-  'Oran','El Bayadh','Illizi','Bordj Bou Arreridj','Boumerdes','El Tarf','Tindouf','Tissemsilt','El Oued','Khenchela',
-  'Souk Ahras','Tipaza','Mila','Ain Defla','Naama','Biskra','Relizane','El Mghair','El Meniaa','Ouled Djellal',
-  'Bordj Badji Mokhtar','Djanet','In Guezzam','In Salah','Touggourt','Timmimoun','Ouled Djellal','Beni Abbes',
-];
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -43,7 +35,8 @@ export default function CheckoutPage() {
   }, []);
 
   const shippingPromotionActive = Boolean(shippingSettings?.free_shipping_enabled && (!shippingSettings.free_shipping_until || new Date(shippingSettings.free_shipping_until) >= new Date()));
-  const shippingCost = shippingPromotionActive ? 0 : form.shipping_method === 'office' ? (shippingSettings?.office_delivery_rate ?? 400) : (shippingSettings?.home_delivery_rate ?? 700);
+  const selectedWilaya = WILAYAS.find((wilaya) => wilaya.name === form.wilaya);
+  const shippingCost = shippingPromotionActive ? 0 : getWilayaRate(shippingSettings?.wilaya_shipping_rates, selectedWilaya?.code, form.shipping_method === 'office' ? 'desk' : 'home');
   const total = subtotal - discount + shippingCost;
   const loyaltyPoints = calculateLoyaltyPoints(total);
 
@@ -157,8 +150,8 @@ export default function CheckoutPage() {
                   className="luxe-input cursor-pointer"
                 >
                   <option value="">Select your wilaya</option>
-                  {WILAYAS.map((w) => (
-                    <option key={w} value={w}>{w}</option>
+                  {WILAYAS.map((wilaya) => (
+                    <option key={wilaya.code} value={wilaya.name}>{wilaya.code} — {wilaya.name}</option>
                   ))}
                 </select>
               </div>

@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Product, Category, Coupon, Order, Review, OrderInput, StoreSettings } from '@/lib/types';
+import { createDefaultWilayaRates, normalizeWilayaRates } from '@/lib/wilayas';
 
 const defaultStoreSettings: StoreSettings = {
   phone: '+213 555 000 000',
@@ -30,12 +31,15 @@ const defaultStoreSettings: StoreSettings = {
   free_shipping_mode: 'days',
   free_shipping_days: 7,
   free_shipping_until: '',
+  wilaya_shipping_rates: createDefaultWilayaRates(),
 };
 
 export async function getStoreSettings(): Promise<StoreSettings> {
   try {
     const snapshot = await getDoc(doc(db, 'settings', 'store'));
-    return snapshot.exists() ? { ...defaultStoreSettings, ...snapshot.data() } as StoreSettings : defaultStoreSettings;
+    if (!snapshot.exists()) return defaultStoreSettings;
+    const data = snapshot.data();
+    return { ...defaultStoreSettings, ...data, wilaya_shipping_rates: normalizeWilayaRates(data.wilaya_shipping_rates) } as StoreSettings;
   } catch {
     return defaultStoreSettings;
   }

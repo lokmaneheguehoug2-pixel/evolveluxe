@@ -21,6 +21,7 @@ export type StoreSettings = {
   free_shipping_mode: 'days' | 'date';
   free_shipping_days: number;
   free_shipping_until: string;
+  wilaya_shipping_rates: Record<string, { home: number; desk: number }>;
 };
 
 export type Product = {
