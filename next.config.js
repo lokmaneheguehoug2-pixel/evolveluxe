@@ -4,6 +4,9 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: { unoptimized: true },
+  env: {
+    apiKey: process.env.apiKey,
+  },
 };
 
 module.exports = nextConfig;
