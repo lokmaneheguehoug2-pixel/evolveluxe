@@ -40,6 +40,34 @@ import { AdminErrorBoundary } from '@/components/admin/admin-error-boundary';
 
 type Tab = 'overview' | 'products' | 'orders' | 'coupons' | 'settings';
 
+const MAX_IMAGE_BYTES = 280 * 1024;
+
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      const scale = Math.min(1, 800 / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      const context = canvas.getContext('2d');
+      if (!context) { URL.revokeObjectURL(objectUrl); reject(new Error('Could not prepare image')); return; }
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      let quality = 0.7;
+      let result = canvas.toDataURL('image/jpeg', quality);
+      while (result.length * 0.75 > MAX_IMAGE_BYTES && quality > 0.35) {
+        quality -= 0.05;
+        result = canvas.toDataURL('image/jpeg', quality);
+      }
+      URL.revokeObjectURL(objectUrl);
+      resolve(result);
+    };
+    image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Could not read image')); };
+    image.src = objectUrl;
+  });
+}
+
 function AdminDashboard() {
   const router = useRouter();
   const { user, hydrated, signOut } = useAuthStore();
@@ -457,7 +485,7 @@ function ProductForm({
     price: product?.price || 0,
     original_price: product?.original_price || 0,
     category_id: product?.category_id || categories[0]?.id || '',
-    images: product?.images.join('\n') || '',
+    images: Array.isArray(product?.images) ? product?.images.join('\n') : '',
     video_url: product?.video_url || '',
     stock: product?.stock || 0,
     is_featured: product?.is_featured || false,
@@ -468,31 +496,32 @@ function ProductForm({
 
   const handleFiles = async (files: FileList | null) => {
     if (!files?.length) return;
-    const previews = await Promise.all(Array.from(files).map((file) => new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    })));
-    setImageUrls((current) => [...current, ...previews]);
+    try {
+      const previews = await Promise.all(Array.from(files).map(compressImage));
+      setImageUrls((current) => [...current, ...previews]);
+      toast.success(`${previews.length} image${previews.length === 1 ? '' : 's'} compressed and ready`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to compress image');
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const typedImages = form.images.split('\n').map((s) => s.trim()).filter(Boolean);
-    const images = Array.from(new Set([...imageUrls, ...typedImages]));
-    const slug = form.slug || form.name.toLowerCase().replace(/\s+/g, '-');
+    const typedImages = String(form.images || '').split('\n').map((s) => s.trim()).filter(Boolean);
+    const images = Array.from(new Set([...imageUrls, ...typedImages])).filter((image): image is string => typeof image === 'string' && image.length > 0);
+    const name = String(form.name || '').trim();
+    const slug = String(form.slug || name.toLowerCase().replace(/\s+/g, '-')).trim();
     const payload = {
-      name: form.name,
+      name,
       slug,
-      description: form.description,
-      price: Number(form.price),
-      original_price: form.original_price ? Number(form.original_price) : null,
-      category_id: form.category_id || null,
+      description: String(form.description || ''),
+      price: Number.isFinite(Number(form.price)) ? Number(form.price) : 0,
+      original_price: Number(form.original_price) > 0 ? Number(form.original_price) : null,
+      category_id: form.category_id ? String(form.category_id) : null,
       images,
-      video_url: form.video_url || null,
-      stock: Number(form.stock),
+      video_url: form.video_url ? String(form.video_url).trim() : null,
+      stock: Number.isFinite(Number(form.stock)) ? Number(form.stock) : 0,
       is_featured: form.is_featured,
       is_on_sale: form.is_on_sale,
       rating: product?.rating || 0,
@@ -503,7 +532,7 @@ function ProductForm({
 
     try {
       let savedProduct: Product;
-      if (product) {
+      if (product?.id) {
         await updateDoc(doc(db, 'products', product.id), payload);
         const cat = categories.find((c) => c.id === form.category_id);
         savedProduct = { ...product, ...payload, updated_at: new Date().toISOString(), category: cat } as Product;
@@ -608,7 +637,7 @@ function ProductForm({
           <div className="flex gap-3 pt-4">
             <button type="submit" disabled={saving} className="luxe-btn-primary flex items-center gap-2">
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {product ? 'Update' : 'Create'}
+              {product ? 'Save Product' : 'Publish Product'}
             </button>
             <button type="button" onClick={onClose} className="luxe-btn-outline">Cancel</button>
           </div>
@@ -764,24 +793,29 @@ function CouponsTab({ coupons, setCoupons }: { coupons: Coupon[]; setCoupons: Re
     }
   };
 
-  const handleToggle = async (id: string, isActive: boolean) => {
+  const handleToggle = async (coupon: Coupon) => {
+    const id = coupon?.id || coupon?.code;
+    const nextActive = !Boolean(coupon?.is_active);
+    setCoupons((current) => current.map((item) => ((item.id || item.code) === id ? { ...item, is_active: nextActive } : item)));
+    if (!id) return;
     try {
-      await updateDoc(doc(db, 'coupons', id), { is_active: !isActive });
-      setCoupons(coupons.map((c) => (c.id === id ? { ...c, is_active: !isActive } : c)));
+      await updateDoc(doc(db, 'coupons', id), { is_active: nextActive });
       toast.success('Coupon updated');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update coupon');
+      toast.warning('Coupon updated locally; Firestore record could not be updated.');
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (coupon: Coupon) => {
+    const id = coupon?.id || coupon?.code;
     if (!confirm('Delete this coupon?')) return;
+    setCoupons((current) => current.filter((item) => (item.id || item.code) !== id));
+    if (!id) return;
     try {
       await deleteDoc(doc(db, 'coupons', id));
-      setCoupons(coupons.filter((c) => c.id !== id));
       toast.success('Coupon deleted');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete coupon');
+      toast.warning('Coupon removed locally; Firestore record could not be deleted.');
     }
   };
 
@@ -796,7 +830,7 @@ function CouponsTab({ coupons, setCoupons }: { coupons: Coupon[]; setCoupons: Re
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {coupons.map((c) => (
-          <div key={c.id} className="bg-champagne-100 rounded-lg p-6">
+          <div key={c.id || c.code} className="bg-champagne-100 rounded-lg p-6">
             <div className="flex items-start justify-between mb-3">
               <div>
                 <p className="font-serif text-xl text-burgundy-700">{c.code}</p>
@@ -818,13 +852,13 @@ function CouponsTab({ coupons, setCoupons }: { coupons: Coupon[]; setCoupons: Re
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => handleToggle(c.id, c.is_active)}
+                onClick={() => handleToggle(c)}
                 className="text-xs px-3 py-1.5 rounded bg-burgundy-700/10 text-burgundy-700 hover:bg-burgundy-700/20 transition-colors"
               >
                 {c.is_active ? 'Deactivate' : 'Activate'}
               </button>
               <button
-                onClick={() => handleDelete(c.id)}
+                onClick={() => handleDelete(c)}
                 className="text-xs px-3 py-1.5 rounded text-red-600 hover:bg-red-50 transition-colors"
               >
                 Delete
