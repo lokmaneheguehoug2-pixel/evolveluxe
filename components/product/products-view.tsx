@@ -66,7 +66,7 @@ export function ProductsView({
     }
 
     return result;
-  }, [products, selectedCategory, priceRange, minRating, sortBy, categories]);
+  }, [safeProducts, safeCategories, selectedCategory, priceRange, minRating, sortBy]);
 
   return (
     <div className="luxe-container py-12">

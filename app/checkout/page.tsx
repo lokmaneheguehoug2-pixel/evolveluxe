@@ -6,7 +6,7 @@ import { CheckCircle2, Tag, Loader2, Sparkles } from 'lucide-react';
 import { useCartStore } from '@/lib/stores/cart-store';
 import { validateCoupon, createOrder, formatPrice, calculateLoyaltyPoints, getStoreSettings } from '@/lib/data';
 import type { StoreSettings } from '@/lib/types';
-import { WILAYAS, getWilayaRate } from '@/lib/wilayas';
+import { WILAYAS, getWilayaDeliveryDays, getWilayaRate } from '@/lib/wilayas';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -31,13 +31,22 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    getStoreSettings().then(setShippingSettings);
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      if (active) setShippingSettings(null);
+    }, 5000);
+    getStoreSettings()
+      .then((settings) => { if (active) setShippingSettings(settings); })
+      .catch((error) => console.warn('[v0] Shipping settings unavailable', error))
+      .finally(() => window.clearTimeout(timeout));
+    return () => { active = false; window.clearTimeout(timeout); };
   }, []);
 
   const shippingPromotionActive = Boolean(shippingSettings?.free_shipping_enabled && (!shippingSettings.free_shipping_until || new Date(shippingSettings.free_shipping_until) >= new Date()));
   const selectedWilaya = WILAYAS.find((wilaya) => wilaya.name === form.wilaya);
   const shippingCostFor = (method: 'home' | 'office') => getWilayaRate(shippingSettings?.wilaya_shipping_rates, selectedWilaya?.code, method === 'office' ? 'desk' : 'home');
   const shippingCost = shippingPromotionActive ? 0 : shippingCostFor(form.shipping_method);
+  const deliveryDays = selectedWilaya ? getWilayaDeliveryDays(shippingSettings?.wilaya_shipping_rates, selectedWilaya.code) : 'Select a Wilaya to see delivery timing';
   const total = subtotal - discount + shippingCost;
   const loyaltyPoints = calculateLoyaltyPoints(total);
 
@@ -162,6 +171,9 @@ export default function CheckoutPage() {
                   <option value="home">Livraison à Domicile — {formatPrice(shippingPromotionActive ? 0 : shippingCostFor('home'))}</option>
                   <option value="office">Livraison Stop Desk — {formatPrice(shippingPromotionActive ? 0 : shippingCostFor('office'))}</option>
                 </select>
+              </div>
+              <div className="md:col-span-2 rounded-md border border-burgundy/10 bg-champagne-200/40 px-4 py-3 text-sm text-burgundy-700" aria-live="polite">
+                <span className="font-medium">Estimated delivery:</span> {deliveryDays}
               </div>
               <div className="md:col-span-2">
                 <label className="luxe-label">Detailed Address *</label>
