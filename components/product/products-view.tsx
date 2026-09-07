@@ -20,6 +20,8 @@ export function ProductsView({
   activeSale?: boolean;
   searchQuery?: string;
 }) {
+  const safeProducts = useMemo(() => (Array.isArray(products) ? products.filter(Boolean) : []), [products]);
+  const safeCategories = useMemo(() => (Array.isArray(categories) ? categories.filter(Boolean) : []), [categories]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     activeCategory || null
@@ -31,10 +33,10 @@ export function ProductsView({
   );
 
   const filtered = useMemo(() => {
-    let result = Array.isArray(products) ? [...products] : [];
+    let result = [...safeProducts];
 
     if (selectedCategory) {
-      const cat = (Array.isArray(categories) ? categories : []).find((c) => c?.slug === selectedCategory);
+      const cat = safeCategories.find((c) => c?.slug === selectedCategory);
       if (cat) {
         result = result.filter((p) => p.category_id === cat.id || p.category_id === cat.slug || p.category?.id === cat.id || p.category?.slug === cat.slug);
       }
@@ -76,7 +78,7 @@ export function ProductsView({
             : activeSale
             ? 'Flash Sale'
             : selectedCategory
-            ? (Array.isArray(categories) ? categories : []).find((c) => c?.slug === selectedCategory)?.name ||
+            ? safeCategories.find((c) => c?.slug === selectedCategory)?.name ||
               'Products'
             : 'All Products'}
         </h1>
@@ -117,7 +119,7 @@ export function ProductsView({
               >
                 All Categories
               </button>
-              {(Array.isArray(categories) ? categories : []).filter(Boolean).map((cat) => (
+              {safeCategories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.slug)}
@@ -238,7 +240,7 @@ export function ProductsView({
             </div>
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {filtered.map((product) => (
+              {filtered.filter(Boolean).map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>

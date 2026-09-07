@@ -72,8 +72,8 @@ function snapToProduct(d: DocumentData = {}, category?: Category): Product {
     name: asString(d.name, 'Untitled product'),
     slug: asString(d.slug, asString(d.id)),
     description: d.description == null ? null : asString(d.description),
-    price: Number(d.price ?? 0),
-    original_price: d.original_price != null ? Number(d.original_price) : null,
+    price: Number.isFinite(Number(d.price)) ? Number(d.price) : 0,
+    original_price: Number.isFinite(Number(d.original_price)) && Number(d.original_price) > 0 ? Number(d.original_price) : null,
     category_id: d.category_id == null ? null : asString(d.category_id),
     images: asStringArray(d.images),
     video_url: d.video_url == null ? null : asString(d.video_url),
@@ -187,9 +187,9 @@ export async function getProducts(opts?: {
       const s = opts.search.toLowerCase();
       products = products.filter(
         (p) =>
-          p.name.toLowerCase().includes(s) ||
+          p.name?.toLowerCase().includes(s) ||
           (p.description?.toLowerCase().includes(s) ?? false) ||
-          p.tags.some((t) => t.toLowerCase().includes(s))
+          (p.tags ?? []).some((t) => t?.toLowerCase().includes(s))
       );
     }
 
@@ -208,8 +208,9 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     const q = query(collection(db, 'products'), where('slug', '==', slug), fbLimit(1));
     const snap = await getDocs(q);
     if (snap.empty) return null;
-    const data = snap.docs[0].data();
-    const product = snapToProduct({ ...data, id: snap.docs[0].id });
+    const docSnap = snap.docs[0];
+    const data = docSnap.data();
+    const product = snapToProduct({ ...data, id: docSnap.id });
 
     // Fetch category
     if (product.category_id) {
@@ -252,8 +253,11 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 }
 
 export async function getProductBySlugOrId(value: string): Promise<Product | null> {
-  const byId = await getProductById(value);
-  return byId || getProductBySlug(value);
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  if (!normalized) return null;
+
+  const byId = await getProductById(normalized);
+  return byId || getProductBySlug(normalized);
 }
 
 export async function getProductById(id: string): Promise<Product | null> {

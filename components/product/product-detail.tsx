@@ -30,6 +30,9 @@ export function ProductDetail({
   product: Product;
   related: Product[];
 }) {
+  const images = product.images?.filter(Boolean) ?? [];
+  const safePrice = Number.isFinite(Number(product.price)) ? Number(product.price) : 0;
+  const safeStock = Number.isFinite(Number(product.stock)) ? Number(product.stock) : 0;
   const [activeImage, setActiveImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState<string | null>(
     product.variants?.[0]?.color || null
@@ -43,7 +46,7 @@ export function ProductDetail({
   const toggleWishlist = useWishlistStore((s) => s.toggleItem);
   const inWishlist = useWishlistStore((s) => s.hasItem(product.id));
 
-  const discount = getDiscountPercent(product.price, product.original_price || 0);
+  const discount = getDiscountPercent(safePrice, product.original_price || 0);
   const colors = Array.from(
     new Set(product.variants?.map((v) => v.color).filter(Boolean) || [])
   );
@@ -56,12 +59,12 @@ export function ProductDetail({
       productId: product.id,
       name: product.name,
       slug: product.slug,
-      price: product.price,
-      image: product.images[0],
+      price: safePrice,
+      image: images[0] || '/placeholder.svg',
       quantity,
       variantColor: selectedColor || undefined,
       variantSize: selectedSize || undefined,
-      stock: product.stock,
+      stock: safeStock,
     });
     toast.success(`${product.name} added to cart`);
     openCart();
@@ -72,12 +75,12 @@ export function ProductDetail({
       productId: product.id,
       name: product.name,
       slug: product.slug,
-      price: product.price,
-      image: product.images[0],
+      price: safePrice,
+      image: images[0] || '/placeholder.svg',
       quantity,
       variantColor: selectedColor || undefined,
       variantSize: selectedSize || undefined,
-      stock: product.stock,
+      stock: safeStock,
     });
     window.location.href = '/checkout';
   };
@@ -99,7 +102,7 @@ export function ProductDetail({
           <div className="relative aspect-square rounded-lg overflow-hidden bg-champagne-100 group">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={product.images[activeImage]}
+              src={images[activeImage] || '/placeholder.svg'}
               alt={product.name}
               className="h-full w-full object-cover"
             />
@@ -118,9 +121,9 @@ export function ProductDetail({
               </span>
             )}
           </div>
-          {product.images.length > 1 && (
+          {images.length > 1 && (
             <div className="flex gap-3 overflow-x-auto no-scrollbar">
-              {product.images.map((img, idx) => (
+              {images.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveImage(idx)}

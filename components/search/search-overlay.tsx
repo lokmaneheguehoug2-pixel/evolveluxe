@@ -28,12 +28,16 @@ export function SearchOverlay() {
       return;
     }
     setLoading(true);
-    const timer = setTimeout(async () => {
-      const products = await getProducts({ search: query, limit: 8 });
-      setResults(products);
-      setLoading(false);
+    setResults([]);
+    let active = true;
+    const timeout = setTimeout(() => {
+      void getProducts({ search: query, limit: 8 })
+        .then((products) => { if (active) setResults(Array.isArray(products) ? products : []); })
+        .catch((error) => { console.warn('[v0] Search unavailable', error); if (active) setResults([]); })
+        .finally(() => { if (active) setLoading(false); });
     }, 300);
-    return () => clearTimeout(timer);
+    const failSafe = setTimeout(() => { if (active) setLoading(false); }, 5000);
+    return () => { active = false; clearTimeout(timeout); clearTimeout(failSafe); };
   }, [query]);
 
   const close = () => {
@@ -93,7 +97,7 @@ export function SearchOverlay() {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={product.images[0]}
+                    src={product.images?.[0] || '/placeholder.svg'}
                     alt={product.name}
                     className="h-16 w-16 rounded-md object-cover"
                   />
