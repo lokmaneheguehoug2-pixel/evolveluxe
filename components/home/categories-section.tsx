@@ -17,7 +17,7 @@ export function CategoriesSection({ categories }: { categories: Category[] }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {categories.map((category, idx) => (
+        {(categories ?? []).filter(Boolean).map((category, idx) => (
           <Link
             key={category.id}
             href={`/products?category=${category.slug}`}

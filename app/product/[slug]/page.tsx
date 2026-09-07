@@ -7,14 +7,22 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductBySlugOrId(slug);
+  const product = await Promise.race([
+    getProductBySlugOrId(slug),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+  ]);
   return { title: product?.name ? `${product.name} — EVOLVE LUXE` : 'Product — EVOLVE LUXE' };
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const product = await getProductBySlugOrId(slug);
+  const product = await Promise.race([
+    getProductBySlugOrId(slug),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+  ]);
   if (!product) notFound();
-  const related = product.category_id ? await getRelatedProducts(product.category_id, product.id, 4) : [];
+  const related = product.category_id
+    ? await getRelatedProducts(product.category_id, product.id, 4).catch(() => [])
+    : [];
   return <div className="pt-[100px]"><ProductDetail product={product} related={related} /></div>;
 }
