@@ -8,7 +8,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   }, [error]);
 
   return (
-    <main className="flex min-h-[60vh] items-center justify-center px-6 py-16 text-center">
+    <main role="alert" className="flex min-h-[60vh] items-center justify-center bg-background px-6 py-16 text-center">
       <div className="max-w-md space-y-4">
         <p className="text-sm uppercase tracking-[0.2em] text-burgundy/60">EVOLVE LUXE</p>
         <h1 className="font-serif text-3xl text-burgundy-700">We&apos;re preparing the storefront</h1>
