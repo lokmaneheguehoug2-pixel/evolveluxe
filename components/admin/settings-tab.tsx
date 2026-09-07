@@ -54,12 +54,12 @@ export function SettingsTab({ settings, onSaved }: { settings: StoreSettings; on
           <h2 className="font-serif text-2xl text-burgundy-700 flex items-center gap-2"><Truck className="h-5 w-5" /> Shipping Settings</h2>
           <p className="text-sm text-burgundy/55 mt-1 mb-4">Set delivery prices for every Algerian Wilaya.</p>
           <div className="max-h-[480px] overflow-auto border border-burgundy/10 rounded-md">
-            <div className="grid grid-cols-[1fr_8rem_8rem] gap-3 px-4 py-3 bg-burgundy-700 text-champagne-100 text-xs uppercase tracking-wider sticky top-0">
+            <div className="min-w-[34rem] grid grid-cols-[1fr_8rem_8rem] gap-3 px-4 py-3 bg-burgundy-700 text-champagne-100 text-xs uppercase tracking-wider sticky top-0">
               <span>Wilaya</span><span>Home (DZD)</span><span>Desk (DZD)</span>
             </div>
             {WILAYAS.map((wilaya) => {
               const rate = form.wilaya_shipping_rates[wilaya.code] || { home: 0, desk: 0 };
-              return <div key={wilaya.code} className="grid grid-cols-[1fr_8rem_8rem] gap-3 items-center px-4 py-2 border-b border-burgundy/5 last:border-0">
+              return <div key={wilaya.code} className="min-w-[34rem] grid grid-cols-[1fr_8rem_8rem] gap-3 items-center px-4 py-2 border-b border-burgundy/5 last:border-0">
                 <span className="text-sm text-burgundy-700"><b>{wilaya.code}</b> · {wilaya.name} <span className="text-burgundy/50">{wilaya.nameAr}</span></span>
                 <input aria-label={`${wilaya.name} home delivery`} type="number" min="0" value={rate.home} onChange={(event) => updateWilayaRate(wilaya.code, 'home', Number(event.target.value))} className="luxe-input !py-2" />
                 <input aria-label={`${wilaya.name} desk delivery`} type="number" min="0" value={rate.desk} onChange={(event) => updateWilayaRate(wilaya.code, 'desk', Number(event.target.value))} className="luxe-input !py-2" />

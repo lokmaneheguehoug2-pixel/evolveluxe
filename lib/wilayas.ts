@@ -1,6 +1,7 @@
 export type WilayaRate = {
   home: number;
   desk: number;
+  deliveryDays?: string;
 };
 
 export type Wilaya = {
@@ -40,11 +41,19 @@ export function normalizeWilayaRates(value: unknown): Record<string, WilayaRate>
     const home = Number(candidate.home);
     const desk = Number(candidate.desk);
     const fallback = MATRIX_RATES[code] ?? DEFAULT_WILAYA_RATE;
-    return [code, { home: Number.isFinite(home) && home >= 0 ? home : fallback.home, desk: Number.isFinite(desk) && desk >= 0 ? desk : fallback.desk }];
+    const deliveryDays = typeof candidate.deliveryDays === 'string' && candidate.deliveryDays.trim()
+      ? candidate.deliveryDays.trim()
+      : fallback.home >= 1500 ? '5–8 business days' : fallback.home >= 800 ? '3–5 business days' : '2–4 business days';
+    return [code, { home: Number.isFinite(home) && home >= 0 ? home : fallback.home, desk: Number.isFinite(desk) && desk >= 0 ? desk : fallback.desk, deliveryDays }];
   }));
 }
 
 export function getWilayaRate(rates: unknown, code: string | undefined, method: 'home' | 'desk'): number {
   const normalized = normalizeWilayaRates(rates);
   return normalized[code || '']?.[method] ?? 0;
+}
+
+export function getWilayaDeliveryDays(rates: unknown, code: string | undefined): string {
+  const normalized = normalizeWilayaRates(rates);
+  return normalized[code || '']?.deliveryDays ?? '2–4 business days';
 }
