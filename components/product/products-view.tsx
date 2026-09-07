@@ -31,10 +31,10 @@ export function ProductsView({
   );
 
   const filtered = useMemo(() => {
-    let result = [...products];
+    let result = Array.isArray(products) ? [...products] : [];
 
     if (selectedCategory) {
-      const cat = categories.find((c) => c.slug === selectedCategory);
+      const cat = (Array.isArray(categories) ? categories : []).find((c) => c?.slug === selectedCategory);
       if (cat) {
         result = result.filter((p) => p.category_id === cat.id || p.category_id === cat.slug || p.category?.id === cat.id || p.category?.slug === cat.slug);
       }
@@ -76,7 +76,7 @@ export function ProductsView({
             : activeSale
             ? 'Flash Sale'
             : selectedCategory
-            ? categories.find((c) => c.slug === selectedCategory)?.name ||
+            ? (Array.isArray(categories) ? categories : []).find((c) => c?.slug === selectedCategory)?.name ||
               'Products'
             : 'All Products'}
         </h1>
@@ -117,7 +117,7 @@ export function ProductsView({
               >
                 All Categories
               </button>
-              {categories.map((cat) => (
+              {(Array.isArray(categories) ? categories : []).filter(Boolean).map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.slug)}

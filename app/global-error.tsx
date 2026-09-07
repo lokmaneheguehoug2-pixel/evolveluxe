@@ -9,7 +9,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 
   return (
     <html lang="en">
-      <body className="min-h-screen bg-background text-foreground">
+      <body style={{ margin: 0, minHeight: '100vh', background: '#f5efe6', color: '#5a1f2b', fontFamily: 'system-ui, sans-serif' }}>
         <main className="flex min-h-screen items-center justify-center p-6 text-center">
           <section className="max-w-md space-y-4">
             <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Evolve Luxe</p>
