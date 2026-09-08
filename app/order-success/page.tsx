@@ -54,9 +54,6 @@ export default function OrderSuccessPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/account" className="luxe-btn-primary">
-            View My Orders
-          </Link>
           <Link href="/products" className="luxe-btn-outline">
             Continue Shopping
           </Link>

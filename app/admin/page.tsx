@@ -34,6 +34,10 @@ import {
   Eye,
   LogOut,
   Settings,
+  Search,
+  Download,
+  SlidersHorizontal,
+  XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SettingsTab } from '@/components/admin/settings-tab';
@@ -688,97 +692,61 @@ function ProductForm({
 }
 
 function OrdersTab({ orders, setOrders }: { orders: Order[]; setOrders: React.Dispatch<React.SetStateAction<Order[]>> }) {
-  const STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+  const STATUSES: Order['status'][] = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | Order['status']>('all');
+  const [selected, setSelected] = useState<Order | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  const filteredOrders = orders.filter((order) => {
+    const safe = order ?? ({} as Order);
+    const needle = query.trim().toLowerCase();
+    const matchesQuery = !needle || [safe.id, safe.full_name, safe.phone, safe.wilaya].some((value) => String(value ?? '').toLowerCase().includes(needle));
+    return matchesQuery && (statusFilter === 'all' || safe.status === statusFilter);
+  });
 
   const handleStatusChange = async (orderId: string, status: Order['status']) => {
-    if (!orderId || orderId === 'unknown') {
-      toast.error('This order is missing its Firestore ID.');
-      return;
-    }
+    if (!orderId || orderId === 'unknown') return toast.error('This order is missing its Firestore ID.');
+    setUpdating(orderId);
     const { error } = await updateOrderStatus(orderId, status);
-    if (error) {
-      toast.error(error);
-      return;
-    }
-    setOrders(orders.map((o) => (o.id === orderId ? { ...o, status } : o)));
+    setUpdating(null);
+    if (error) return toast.error(error);
+    setOrders((current) => current.map((order) => (order.id === orderId ? { ...order, status } : order)));
+    setSelected((current) => current?.id === orderId ? { ...current, status } : current);
     toast.success('Order status updated');
   };
 
-  const handleCancel = (orderId: string) => handleStatusChange(orderId, 'cancelled');
+  const exportCsv = () => {
+    const headers = ['Order ID', 'Date', 'Customer', 'Phone', 'Wilaya', 'Status', 'Total'];
+    const rows = filteredOrders.map((order) => [order.id, order.created_at, order.full_name, order.phone, order.wilaya, order.status, order.total]);
+    const csv = [headers, ...rows].map((row) => row.map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(',')).join('\\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'evolve-luxe-orders.csv';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <div>
-      <h1 className="font-serif text-3xl text-burgundy-700 mb-8">Orders</h1>
-      <div className="space-y-4">
-        {orders.map((order) => {
-          const safeOrder = order ?? ({} as Order);
-          const orderId = safeOrder.id || 'unknown';
-          const orderItems = Array.isArray(safeOrder.order_items) ? safeOrder.order_items.filter(Boolean) : [];
-          return (
-          <div key={orderId} className="bg-champagne-100 rounded-lg p-6">
-            <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-              <div>
-                <p className="font-serif text-lg text-burgundy-700">Order #{orderId.slice(0, 8)}</p>
-                <p className="text-sm text-burgundy/50">
-                  {safeOrder.created_at ? new Date(safeOrder.created_at).toLocaleString() : 'N/A'}
-                </p>
-                <p className="text-sm text-burgundy/70 mt-1">
-                  {safeOrder.full_name || 'N/A'} · {safeOrder.phone || 'N/A'} · {safeOrder.wilaya || 'N/A'}
-                </p>
-                <p className="text-sm text-burgundy/50">{safeOrder.address || 'N/A'}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-serif text-xl text-burgundy-700">{formatPrice(Number(safeOrder.total) || 0)}</p>
-                {Number(safeOrder.discount) > 0 && (
-                  <p className="text-xs text-green-600">Saved {formatPrice(Number(safeOrder.discount) || 0)}</p>
-                )}
-                <p className="text-xs text-burgundy/50">
-                  {Number(safeOrder.loyalty_points_earned) || 0} points earned
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-2 mb-4">
-              {orderItems.map((item) => (
-                <div key={item?.id || `${orderId}-${item?.product_id || 'item'}`} className="flex items-center gap-3 text-sm">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {item?.product_image && (
-                    <img src={item.product_image} alt={item.product_name || 'Product'} className="h-10 w-10 rounded object-cover" />
-                  )}
-                  <span className="text-burgundy/70">{item?.product_name || 'Product'}</span>
-                  <span className="text-burgundy/50">× {Number(item?.quantity) || 0}</span>
-                  <span className="text-burgundy-700 font-medium ml-auto">{formatPrice((Number(item?.unit_price) || 0) * (Number(item?.quantity) || 0))}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2 pt-4 border-t border-burgundy/10">
-              <span className="text-sm text-burgundy/60 uppercase tracking-wider">Status:</span>
-              <select
-                value={safeOrder.status || 'pending'}
-                onChange={(e) => handleStatusChange(orderId, e.target.value as Order['status'])}
-                className={cn(
-                  'min-h-11 text-sm font-medium px-3 py-2 rounded-md border-2 cursor-pointer',
-                  safeOrder.status === 'delivered'
-                    ? 'border-green-600 text-green-700 bg-green-50'
-                    : safeOrder.status === 'cancelled'
-                    ? 'border-red-600 text-red-700 bg-red-50'
-                    : 'border-burgundy/20 text-burgundy-700'
-                )}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              {safeOrder.status !== 'cancelled' && <button type="button" onClick={() => handleCancel(orderId)} className="min-h-11 px-4 py-2 rounded-md text-sm font-medium text-red-700 border border-red-200 hover:bg-red-50">Cancel order</button>}
-            </div>
-          </div>
-          );
-        })}
-        {orders.length === 0 && (
-          <p className="text-center text-burgundy/50 py-20">No orders yet.</p>
-        )}
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div><p className="text-xs uppercase tracking-[0.24em] text-burgundy/50">Operations</p><h1 className="font-serif text-3xl text-burgundy-700">Orders</h1></div>
+        <button type="button" onClick={exportCsv} className="luxe-btn-outline flex items-center gap-2"><Download className="h-4 w-4" /> Export CSV</button>
       </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {STATUSES.slice(0, 4).map((status) => <div key={status} className="bg-champagne-100 rounded-lg p-4"><p className="text-xs uppercase tracking-wider text-burgundy/50">{status}</p><p className="font-serif text-2xl text-burgundy-700">{orders.filter((order) => order.status === status).length}</p></div>)}
+      </div>
+      <div className="flex flex-col md:flex-row gap-3">
+        <label className="relative flex-1"><Search className="absolute left-3 top-3 h-4 w-4 text-burgundy/40" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="luxe-input pl-9" placeholder="Search order, customer, phone, Wilaya" aria-label="Search orders" /></label>
+        <label className="relative"><SlidersHorizontal className="absolute left-3 top-3 h-4 w-4 text-burgundy/40" /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="luxe-input pl-9 min-w-48" aria-label="Filter orders by status"><option value="all">All statuses</option>{STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-burgundy/10 bg-champagne-50">
+        <table className="w-full min-w-[760px] text-left"><thead className="bg-burgundy-700 text-champagne-100 text-xs uppercase tracking-wider"><tr><th className="px-4 py-3">Order</th><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Wilaya</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Action</th></tr></thead><tbody>{filteredOrders.map((order) => <tr key={order.id} className="border-b border-burgundy/10 last:border-0 hover:bg-champagne-100"><td className="px-4 py-4"><button type="button" onClick={() => setSelected(order)} className="font-medium text-burgundy-700 hover:underline">#{order.id.slice(0, 8)}</button><p className="text-xs text-burgundy/50">{new Date(order.created_at).toLocaleDateString()}</p></td><td className="px-4 py-4"><p className="text-burgundy-700">{order.full_name || 'N/A'}</p><p className="text-xs text-burgundy/50">{order.phone || 'N/A'}</p></td><td className="px-4 py-4 text-burgundy/70">{order.wilaya || 'N/A'}</td><td className="px-4 py-4 font-medium text-burgundy-700">{formatPrice(Number(order.total) || 0)}</td><td className="px-4 py-4"><select disabled={updating === order.id} value={order.status || 'pending'} onChange={(event) => handleStatusChange(order.id, event.target.value as Order['status'])} className="rounded-md border border-burgundy/20 bg-transparent px-2 py-2 text-sm text-burgundy-700">{STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></td><td className="px-4 py-4"><button type="button" onClick={() => setSelected(order)} className="text-sm text-burgundy-700 underline">View details</button></td></tr>)}</tbody></table>
+        {filteredOrders.length === 0 && <p className="py-16 text-center text-burgundy/50">No matching orders.</p>}
+      </div>
+      {selected && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-burgundy-900/60 p-4" onClick={() => setSelected(null)}><div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-champagne-50 p-6" onClick={(event) => event.stopPropagation()}><div className="flex items-start justify-between gap-4"><div><p className="text-xs uppercase tracking-wider text-burgundy/50">Order details</p><h2 className="font-serif text-2xl text-burgundy-700">#{selected.id}</h2></div><button type="button" onClick={() => setSelected(null)} aria-label="Close order details"><XCircle className="h-6 w-6 text-burgundy/60" /></button></div><div className="mt-6 grid gap-3 text-sm text-burgundy/70 md:grid-cols-2"><p><strong>Customer:</strong> {selected.full_name}</p><p><strong>Phone:</strong> {selected.phone}</p><p><strong>Wilaya:</strong> {selected.wilaya}</p><p><strong>Method:</strong> {String((selected as Order & { shipping_method?: string }).shipping_method || 'Home')}</p><p className="md:col-span-2"><strong>Address:</strong> {selected.address}</p></div><div className="mt-6 space-y-3 border-t border-burgundy/10 pt-4">{(selected.order_items ?? []).map((item) => <div key={item.id} className="flex items-center gap-3 text-sm"><span className="flex-1 text-burgundy-700">{item.product_name}</span><span className="text-burgundy/60">{item.quantity} × {formatPrice(item.unit_price)}</span></div>)}</div><div className="mt-6 flex justify-end border-t border-burgundy/10 pt-4 font-serif text-xl text-burgundy-700">{formatPrice(Number(selected.total) || 0)}</div></div></div>}
     </div>
   );
 }
