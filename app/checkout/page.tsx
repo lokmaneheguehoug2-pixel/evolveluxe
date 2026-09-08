@@ -98,6 +98,13 @@ export default function CheckoutPage() {
         return;
       }
       clear();
+      if (result.order) {
+        void fetch('/api/telegram/order', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ order: result.order }),
+        }).catch((error) => console.warn('[v0] Telegram notification unavailable', error));
+      }
       toast.success('Order placed successfully!');
       router.push(`/order-success?id=${result.order?.id}`);
     } catch (error) {
