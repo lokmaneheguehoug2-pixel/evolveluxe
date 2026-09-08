@@ -4,10 +4,9 @@ import { create } from 'zustand';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Heart, Search, User, Menu } from 'lucide-react';
+import { ShoppingBag, Heart, Search, Menu } from 'lucide-react';
 import { useCartStore } from '@/lib/stores/cart-store';
 import { useWishlistStore } from '@/lib/stores/wishlist-store';
-import { useAuthStore } from '@/lib/stores/auth-store';
 import {
   Sheet,
   SheetContent,
@@ -44,7 +43,6 @@ export function Header() {
   const wishlistCount = useWishlistStore((s) => s.items.length);
   const openWishlist = useWishlistStore((s) => s.open);
   const setSearchOpen = useSearchStore((s) => s.setOpen);
-  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -90,13 +88,6 @@ export function Header() {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                href="/account"
-                onClick={() => setMobileOpen(false)}
-                className="text-champagne-200 hover:text-champagne-400 transition-colors py-3 px-4 rounded-md hover:bg-burgundy-600 font-medium uppercase tracking-wider text-sm"
-              >
-                {user ? 'My Account' : 'Sign In'}
-              </Link>
             </nav>
           </SheetContent>
         </Sheet>
@@ -134,13 +125,6 @@ export function Header() {
           >
             <Search className="h-5 w-5" />
           </button>
-          <Link
-            href="/account"
-            className="text-champagne-200 hover:text-champagne-400 transition-colors p-1 hidden sm:block"
-            aria-label="Account"
-          >
-            <User className="h-5 w-5" />
-          </Link>
           <button
             onClick={openWishlist}
             className="text-champagne-200 hover:text-champagne-400 transition-colors p-1 relative"

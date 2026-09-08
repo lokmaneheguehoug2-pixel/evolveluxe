@@ -349,7 +349,7 @@ export async function createOrder(orderData: OrderInput): Promise<{ order: Order
       }
       return value;
     };
-    const safeItems = orderData.items.map((item) => clean({
+    const safeItems = (Array.isArray(orderData.items) ? orderData.items : []).filter(Boolean).map((item) => clean({
       ...item,
       product_id: item.product_id || 'custom_product',
       product_name: item.product_name || '',
@@ -458,7 +458,7 @@ export async function getOrders(): Promise<Order[]> {
       orders.push(snapToOrder(data, items, orderDoc.id));
     }
     // Sort by created_at descending
-    orders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    orders.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
     return orders;
   } catch {
     return [];

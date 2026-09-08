@@ -73,9 +73,10 @@ export default function CheckoutPage() {
       return;
     }
     setSubmitting(true);
-    const result = await createOrder({
+    try {
+      const result = await createOrder({
       ...form,
-      items: items.map((item) => ({
+      items: (items ?? []).filter(Boolean).map((item) => ({
         product_id: item.productId || (item as { id?: string }).id || 'custom_product',
         product_name: item.name,
         product_image: item.image,
@@ -92,14 +93,19 @@ export default function CheckoutPage() {
       shipping_method: form.shipping_method,
       shipping_cost: shippingCost,
     });
-    setSubmitting(false);
-    if (result.error) {
-      toast.error(result.error);
-      return;
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      clear();
+      toast.success('Order placed successfully!');
+      router.push(`/order-success?id=${result.order?.id}`);
+    } catch (error) {
+      console.warn('[v0] Guest checkout failed', error);
+      toast.error('Unable to place your order. Please check your connection and try again.');
+    } finally {
+      setSubmitting(false);
     }
-    clear();
-    toast.success('Order placed successfully!');
-    router.push(`/order-success?id=${result.order?.id}`);
   };
 
   if (items.length === 0) {

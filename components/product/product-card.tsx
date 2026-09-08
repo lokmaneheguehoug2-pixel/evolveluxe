@@ -10,12 +10,15 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export function ProductCard({ product }: { product: Product }) {
+  const safeImages = product?.images?.filter(Boolean) ?? [];
+  const safePrice = Number.isFinite(Number(product?.price)) ? Number(product.price) : 0;
+  const safeStock = Number.isFinite(Number(product?.stock)) ? Number(product.stock) : 0;
   const toggleWishlist = useWishlistStore((s) => s.toggleItem);
   const hasWishlist = useWishlistStore((s) => s.hasItem(product.id));
   const addItem = useCartStore((s) => s.addItem);
   const openCart = useCartStore((s) => s.open);
 
-  const discount = getDiscountPercent(product.price, product.original_price || 0);
+  const discount = getDiscountPercent(safePrice, Number(product?.original_price) || 0);
   const inWishlist = hasWishlist;
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -25,10 +28,10 @@ export function ProductCard({ product }: { product: Product }) {
       productId: product.id,
       name: product.name,
       slug: product.slug,
-      price: product.price,
-      image: product.images[0],
+      price: safePrice,
+      image: safeImages[0] || '/placeholder.svg',
       quantity: 1,
-      stock: product.stock,
+      stock: safeStock,
     });
     toast.success(`${product.name} added to cart`);
     openCart();
@@ -42,7 +45,7 @@ export function ProductCard({ product }: { product: Product }) {
       name: product.name,
       slug: product.slug,
       price: product.price,
-      image: product.images[0],
+      image: safeImages[0] || '/placeholder.svg',
     });
     toast.success(
       inWishlist ? 'Removed from wishlist' : 'Added to wishlist'
@@ -57,7 +60,7 @@ export function ProductCard({ product }: { product: Product }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={product.images?.[0] || '/placeholder.svg'}
-            alt={product.name}
+            alt={product?.name || 'Product'}
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
             loading="lazy"
           />
@@ -73,12 +76,12 @@ export function ProductCard({ product }: { product: Product }) {
                 Featured
               </span>
             )}
-            {product.stock <= 5 && product.stock > 0 && (
+            {safeStock <= 5 && safeStock > 0 && (
               <span className="bg-red-700 text-white text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
                 Low Stock
               </span>
             )}
-            {product.stock === 0 && (
+            {safeStock === 0 && (
               <span className="bg-gray-700 text-white text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
                 Sold Out
               </span>
