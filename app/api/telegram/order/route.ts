@@ -52,8 +52,8 @@ function buildMessage(order: TelegramOrder) {
 }
 
 export async function POST(request: Request) {
-  const token = process.env.TELEGRAM_BOT_TOKEN_2 || process.env.TELEGRAM_BOT_TOKEN
-  const chatId = process.env.TELEGRAM_CHAT_ID
+  const token = process.env.TG_SECRET_TOKEN || process.env.TELEGRAM_BOT_TOKEN
+  const chatId = process.env.TG_SECRET_CHAT_ID || process.env.TELEGRAM_CHAT_ID || '7127553414'
   if (!token || !chatId) return NextResponse.json({ error: 'Telegram is not configured' }, { status: 503 })
 
   try {
