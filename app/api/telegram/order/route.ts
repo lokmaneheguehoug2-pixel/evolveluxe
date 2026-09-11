@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 type TelegramItem = {
@@ -55,7 +56,10 @@ export async function POST(request: Request) {
   const token = process.env.TELEGRAM_TOKEN?.trim()
   const chatId = process.env.TELEGRAM_CHAT_ID?.trim()
   if (!token || !chatId) {
-    console.error('[v0] Telegram configuration is missing TELEGRAM_TOKEN or TELEGRAM_CHAT_ID')
+    console.error('[v0] Telegram configuration is missing', {
+      hasToken: Boolean(token),
+      hasChatId: Boolean(chatId),
+    })
     return NextResponse.json({ error: 'Telegram is not configured' }, { status: 503 })
   }
 
@@ -71,11 +75,15 @@ export async function POST(request: Request) {
     })
     if (!response.ok) {
       const telegramError = await response.text()
-      console.warn('[v0] Telegram API rejected notification', telegramError)
+      console.warn('[v0] Telegram API rejected notification', {
+        status: response.status,
+        response: telegramError.slice(0, 500),
+      })
       return NextResponse.json({ error: 'Telegram notification failed' }, { status: 502 })
     }
     return NextResponse.json({ ok: true })
-  } catch {
+  } catch (error) {
+    console.error('[v0] Telegram notification request failed', error instanceof Error ? error.message : error)
     return NextResponse.json({ error: 'Invalid notification request' }, { status: 400 })
   }
 }
