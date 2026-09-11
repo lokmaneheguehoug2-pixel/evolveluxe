@@ -103,6 +103,8 @@ export default function CheckoutPage() {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ order: result.order }),
+        }).then(async (response) => {
+          if (!response.ok) console.warn('[v0] Telegram notification unavailable', response.status)
         }).catch((error) => console.warn('[v0] Telegram notification unavailable', error));
       }
       toast.success('Order placed successfully!');
