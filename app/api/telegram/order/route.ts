@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     const body = await request.json() as { order?: TelegramOrder }
     if (!body.order || !text(body.order.id, '')) return NextResponse.json({ error: 'Order payload is required' }, { status: 400 })
 
-    const response = await fetch(`https://api.telegram.org/bot${encodeURIComponent(token)}/sendMessage`, {
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text: buildMessage(body.order), parse_mode: 'MarkdownV2' }),
