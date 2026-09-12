@@ -102,7 +102,21 @@ export default function CheckoutPage() {
         void fetch('/api/telegram/order', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ order: result.order }),
+          body: JSON.stringify({
+            order: {
+              ...result.order,
+              order_items: (items ?? []).filter(Boolean).map((item) => ({
+                id: item.productId || (item as { id?: string }).id,
+                product_id: item.productId || (item as { product_id?: string }).product_id,
+                product_name: item.name,
+                product_image: item.image,
+                quantity: item.quantity,
+                unit_price: item.price,
+                variant_color: item.variantColor,
+                variant_size: item.variantSize,
+              })),
+            },
+          }),
         }).then(async (response) => {
           if (!response.ok) console.warn('[v0] Telegram notification unavailable', response.status)
         }).catch((error) => console.warn('[v0] Telegram notification unavailable', error));
