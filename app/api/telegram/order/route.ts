@@ -26,30 +26,28 @@ type TelegramOrder = {
 
 const text = (value: unknown, fallback = 'N/A') => String(value ?? fallback).trim() || fallback
 const money = (value: unknown) => `${Number(value ?? 0).toLocaleString('fr-DZ')} DZD`
-const escapeMarkdown = (value: unknown) => text(value).replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1')
-
 function buildMessage(order: TelegramOrder) {
   const items = Array.isArray(order.order_items) ? order.order_items as TelegramItem[] : []
   const lines = items.length
-    ? items.map((item) => `• ${escapeMarkdown(item.product_name)} × ${text(item.quantity, '0')} — ${money((Number(item.unit_price) || 0) * (Number(item.quantity) || 0))}`)
+    ? items.map((item) => `• ${text(item.product_name)} × ${text(item.quantity, '0')} — ${money((Number(item.unit_price) || 0) * (Number(item.quantity) || 0))}`)
     : ['• Aucun article']
 
   return [
-    '*Nouvelle commande — EVOLVE LUXE*',
-    `*Commande:* \#${escapeMarkdown(order.id)}`,
-    `*Client:* ${escapeMarkdown(order.full_name)}`,
-    `*Téléphone:* ${escapeMarkdown(order.phone)}`,
-    `*Wilaya:* ${escapeMarkdown(order.wilaya)}`,
-    `*Adresse:* ${escapeMarkdown(order.address)}`,
-    `*Livraison:* ${escapeMarkdown(order.shipping_method || 'home')}`,
+    'Nouvelle commande — EVOLVE LUXE',
+    `Commande: #${text(order.id)}`,
+    `Client: ${text(order.full_name)}`,
+    `Téléphone: ${text(order.phone)}`,
+    `Wilaya: ${text(order.wilaya)}`,
+    `Adresse: ${text(order.address)}`,
+    `Livraison: ${text(order.shipping_method || 'home')}`,
     '',
-    '*Articles:*',
+    'Articles:',
     ...lines,
     '',
-    `Sous\-total: ${money(order.subtotal)}`,
+    `Sous-total: ${money(order.subtotal)}`,
     `Remise: ${money(order.discount)}`,
     `Livraison: ${money(order.shipping_cost)}`,
-    `*Total: ${money(order.total)}*`,
+    `Total: ${money(order.total)}`,
   ].join('\n')
 }
 
@@ -77,7 +75,7 @@ export async function POST(request: Request) {
     const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: buildMessage(body.order), parse_mode: 'MarkdownV2' }),
+      body: JSON.stringify({ chat_id: chatId, text: buildMessage(body.order) }),
       cache: 'no-store',
     })
     if (!response.ok) {

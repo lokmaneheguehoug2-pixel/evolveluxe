@@ -118,8 +118,13 @@ export default function CheckoutPage() {
             },
           }),
         }).then(async (response) => {
-          if (!response.ok) console.warn('[v0] Telegram notification unavailable', response.status)
-        }).catch((error) => console.warn('[v0] Telegram notification unavailable', error));
+          if (!response.ok) {
+            const details = await response.text().catch(() => '')
+            console.error('[v0] Telegram notification unavailable', response.status, details)
+          } else {
+            console.log('[v0] Telegram notification accepted', result.order?.id)
+          }
+        }).catch((error) => console.error('[v0] Telegram notification request failed', error));
       }
       toast.success('Order placed successfully!');
       router.push(`/order-success?id=${result.order?.id}`);
