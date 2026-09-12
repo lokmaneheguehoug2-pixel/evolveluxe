@@ -7,6 +7,7 @@ type TelegramItem = {
   product_name?: unknown
   quantity?: unknown
   unit_price?: unknown
+  product_image?: unknown
 }
 
 type TelegramOrder = {
@@ -67,6 +68,12 @@ export async function POST(request: Request) {
     const body = await request.json() as { order?: TelegramOrder }
     if (!body.order || !text(body.order.id, '')) return NextResponse.json({ error: 'Order payload is required' }, { status: 400 })
 
+    console.log('[v0] Sending Telegram order notification', {
+      orderId: body.order.id,
+      itemCount: Array.isArray(body.order.order_items) ? body.order.order_items.length : 0,
+      hasToken: Boolean(token),
+      hasChatId: Boolean(chatId),
+    })
     const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -81,6 +88,19 @@ export async function POST(request: Request) {
       })
       return NextResponse.json({ error: 'Telegram notification failed' }, { status: 502 })
     }
+    const firstImage = (Array.isArray(body.order.order_items) ? body.order.order_items as TelegramItem[] : [])
+      .map((item) => text(item.product_image, ''))
+      .find(Boolean)
+    if (firstImage) {
+      const photoResponse = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, photo: firstImage, caption: `Order ${text(body.order.id)}` }),
+        cache: 'no-store',
+      })
+      if (!photoResponse.ok) console.error('[v0] Telegram product image rejected', { status: photoResponse.status, response: (await photoResponse.text()).slice(0, 500) })
+    }
+    console.log('[v0] Telegram order notification sent', { orderId: body.order.id })
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('[v0] Telegram notification request failed', error instanceof Error ? error.message : error)
