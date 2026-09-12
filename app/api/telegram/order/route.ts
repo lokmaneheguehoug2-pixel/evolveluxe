@@ -29,7 +29,7 @@ const money = (value: unknown) => `${Number(value ?? 0).toLocaleString('fr-DZ')}
 function buildMessage(order: TelegramOrder) {
   const items = Array.isArray(order.order_items) ? order.order_items as TelegramItem[] : []
   const lines = items.length
-    ? items.map((item) => `• ${escapeMarkdown(item.product_name)} × ${text(item.quantity, '0')} — ${money((Number(item.unit_price) || 0) * (Number(item.quantity) || 0))}`)
+    ? items.map((item) => `• ${text(item.product_name)} × ${text(item.quantity, '0')} — ${money((Number(item.unit_price) || 0) * (Number(item.quantity) || 0))}`)
     : ['• Aucun article']
 
   return [
