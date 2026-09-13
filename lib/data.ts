@@ -9,6 +9,7 @@ import {
   getDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
   Timestamp,
   DocumentData,
@@ -492,6 +493,23 @@ export async function updateOrderStatus(
     return { error: null };
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Failed to update order' };
+  }
+}
+
+export async function deleteCancelledOrder(orderId: string): Promise<{ error: string | null }> {
+  try {
+    if (!orderId || orderId === 'unknown') return { error: 'This order is missing its Firestore ID.' };
+    const orderRef = doc(db, 'orders', orderId);
+    const orderSnap = await getDoc(orderRef);
+    if (!orderSnap.exists()) return { error: 'This order no longer exists.' };
+    if (orderSnap.data().status !== 'cancelled') return { error: 'Only cancelled orders can be deleted.' };
+
+    const itemsSnap = await getDocs(collection(db, 'orders', orderId, 'order_items'));
+    await Promise.all(itemsSnap.docs.map((item) => deleteDoc(item.ref)));
+    await deleteDoc(orderRef);
+    return { error: null };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to delete cancelled order' };
   }
 }
 
