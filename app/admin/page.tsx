@@ -14,7 +14,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getCategories, getProducts, getOrders, getAllCoupons, getStoreSettings, defaultStoreSettings, updateOrderStatus, formatPrice, calculateLoyaltyPoints } from '@/lib/data';
+import { getCategories, getProducts, getOrders, getAllCoupons, getStoreSettings, defaultStoreSettings, updateOrderStatus, deleteCancelledOrder, formatPrice, calculateLoyaltyPoints } from '@/lib/data';
 import type { Product, Order, Coupon, Category, StoreSettings } from '@/lib/types';
 import { toast } from 'sonner';
 import {
@@ -697,6 +697,7 @@ function OrdersTab({ orders, setOrders }: { orders: Order[]; setOrders: React.Di
   const [statusFilter, setStatusFilter] = useState<'all' | Order['status']>('all');
   const [selected, setSelected] = useState<Order | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const filteredOrders = orders.filter((order) => {
     const safe = order ?? ({} as Order);
@@ -714,6 +715,18 @@ function OrdersTab({ orders, setOrders }: { orders: Order[]; setOrders: React.Di
     setOrders((current) => current.map((order) => (order.id === orderId ? { ...order, status } : order)));
     setSelected((current) => current?.id === orderId ? { ...current, status } : current);
     toast.success('Order status updated');
+  };
+
+  const handleDeleteCancelled = async (order: Order) => {
+    if (order.status !== 'cancelled') return;
+    if (!confirm(`Delete cancelled order #${order.id.slice(0, 8)} permanently?`)) return;
+    setDeleting(order.id);
+    const { error } = await deleteCancelledOrder(order.id);
+    setDeleting(null);
+    if (error) return toast.error(error);
+    setOrders((current) => current.filter((item) => item.id !== order.id));
+    setSelected((current) => current?.id === order.id ? null : current);
+    toast.success('Cancelled order deleted');
   };
 
   const exportCsv = () => {
@@ -743,7 +756,7 @@ function OrdersTab({ orders, setOrders }: { orders: Order[]; setOrders: React.Di
         <label className="relative"><SlidersHorizontal className="absolute left-3 top-3 h-4 w-4 text-burgundy/40" /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="luxe-input pl-9 min-w-48" aria-label="Filter orders by status"><option value="all">All statuses</option>{STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
       </div>
       <div className="overflow-x-auto rounded-lg border border-burgundy/10 bg-champagne-50">
-        <table className="w-full min-w-[760px] text-left"><thead className="bg-burgundy-700 text-champagne-100 text-xs uppercase tracking-wider"><tr><th className="px-4 py-3">Order</th><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Wilaya</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Action</th></tr></thead><tbody>{filteredOrders.map((order) => <tr key={order.id} className="border-b border-burgundy/10 last:border-0 hover:bg-champagne-100"><td className="px-4 py-4"><button type="button" onClick={() => setSelected(order)} className="font-medium text-burgundy-700 hover:underline">#{order.id.slice(0, 8)}</button><p className="text-xs text-burgundy/50">{new Date(order.created_at).toLocaleDateString()}</p></td><td className="px-4 py-4"><p className="text-burgundy-700">{order.full_name || 'N/A'}</p><p className="text-xs text-burgundy/50">{order.phone || 'N/A'}</p></td><td className="px-4 py-4 text-burgundy/70">{order.wilaya || 'N/A'}</td><td className="px-4 py-4 font-medium text-burgundy-700">{formatPrice(Number(order.total) || 0)}</td><td className="px-4 py-4"><select disabled={updating === order.id} value={order.status || 'pending'} onChange={(event) => handleStatusChange(order.id, event.target.value as Order['status'])} className="rounded-md border border-burgundy/20 bg-transparent px-2 py-2 text-sm text-burgundy-700">{STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></td><td className="px-4 py-4"><button type="button" onClick={() => setSelected(order)} className="text-sm text-burgundy-700 underline">View details</button></td></tr>)}</tbody></table>
+        <table className="w-full min-w-[760px] text-left"><thead className="bg-burgundy-700 text-champagne-100 text-xs uppercase tracking-wider"><tr><th className="px-4 py-3">Order</th><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Wilaya</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Action</th></tr></thead><tbody>{filteredOrders.map((order) => <tr key={order.id} className="border-b border-burgundy/10 last:border-0 hover:bg-champagne-100"><td className="px-4 py-4"><button type="button" onClick={() => setSelected(order)} className="font-medium text-burgundy-700 hover:underline">#{order.id.slice(0, 8)}</button><p className="text-xs text-burgundy/50">{new Date(order.created_at).toLocaleDateString()}</p></td><td className="px-4 py-4"><p className="text-burgundy-700">{order.full_name || 'N/A'}</p><p className="text-xs text-burgundy/50">{order.phone || 'N/A'}</p></td><td className="px-4 py-4 text-burgundy/70">{order.wilaya || 'N/A'}</td><td className="px-4 py-4 font-medium text-burgundy-700">{formatPrice(Number(order.total) || 0)}</td><td className="px-4 py-4"><select disabled={updating === order.id} value={order.status || 'pending'} onChange={(event) => handleStatusChange(order.id, event.target.value as Order['status'])} className="rounded-md border border-burgundy/20 bg-transparent px-2 py-2 text-sm text-burgundy-700">{STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></td><td className="px-4 py-4"><div className="flex items-center gap-3"><button type="button" onClick={() => setSelected(order)} className="text-sm text-burgundy-700 underline">View details</button>{order.status === 'cancelled' && <button type="button" onClick={() => void handleDeleteCancelled(order)} disabled={deleting === order.id} className="inline-flex items-center gap-1 text-sm text-red-700 hover:text-red-900 disabled:opacity-50" aria-label={`Delete cancelled order ${order.id}`}>{deleting === order.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}<span>Delete</span></button>}</div></td></tr>)}</tbody></table>
         {filteredOrders.length === 0 && <p className="py-16 text-center text-burgundy/50">No matching orders.</p>}
       </div>
       {selected && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-burgundy-900/60 p-4" onClick={() => setSelected(null)}><div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-champagne-50 p-6" onClick={(event) => event.stopPropagation()}><div className="flex items-start justify-between gap-4"><div><p className="text-xs uppercase tracking-wider text-burgundy/50">Order details</p><h2 className="font-serif text-2xl text-burgundy-700">#{selected.id}</h2></div><button type="button" onClick={() => setSelected(null)} aria-label="Close order details"><XCircle className="h-6 w-6 text-burgundy/60" /></button></div><div className="mt-6 grid gap-3 text-sm text-burgundy/70 md:grid-cols-2"><p><strong>Customer:</strong> {selected.full_name}</p><p><strong>Phone:</strong> {selected.phone}</p><p><strong>Wilaya:</strong> {selected.wilaya}</p><p><strong>Method:</strong> {String((selected as Order & { shipping_method?: string }).shipping_method || 'Home')}</p><p className="md:col-span-2"><strong>Address:</strong> {selected.address}</p></div><div className="mt-6 space-y-3 border-t border-burgundy/10 pt-4">{(selected.order_items ?? []).map((item) => <div key={item.id} className="flex items-center gap-3 text-sm"><span className="flex-1 text-burgundy-700">{item.product_name}</span><span className="text-burgundy/60">{item.quantity} × {formatPrice(item.unit_price)}</span></div>)}</div><div className="mt-6 flex justify-end border-t border-burgundy/10 pt-4 font-serif text-xl text-burgundy-700">{formatPrice(Number(selected.total) || 0)}</div></div></div>}
