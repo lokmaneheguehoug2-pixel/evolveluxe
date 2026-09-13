@@ -53,7 +53,7 @@ export function ProductCard({ product }: { product: Product }) {
   };
 
   return (
-    <Link href={`/product/${product.slug || product.id}`} className="group block">
+    <Link href={`/product/${encodeURIComponent(product.slug || product.id)}`} className="group block">
       <div className="luxe-card relative">
         {/* Image */}
         <div className="relative aspect-square overflow-hidden bg-champagne-100">

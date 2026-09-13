@@ -253,11 +253,25 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 }
 
 export async function getProductBySlugOrId(value: string): Promise<Product | null> {
-  const normalized = typeof value === 'string' ? value.trim() : '';
-  if (!normalized) return null;
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  if (!normalized) return null
 
-  const byId = await getProductById(normalized);
-  return byId || getProductBySlug(normalized);
+  const candidates = Array.from(new Set([
+    normalized,
+    decodeURIComponent(normalized),
+    normalized.toLowerCase(),
+    decodeURIComponent(normalized).toLowerCase(),
+  ]))
+
+  for (const candidate of candidates) {
+    const byId = await getProductById(candidate)
+    if (byId) return byId
+  }
+  for (const candidate of candidates) {
+    const bySlug = await getProductBySlug(candidate)
+    if (bySlug) return bySlug
+  }
+  return null
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
