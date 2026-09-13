@@ -3,15 +3,44 @@
 import { useState } from 'react';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { StoreSettings } from '@/lib/types';
+import type { StoreSettings, HeroSlideSettings } from '@/lib/types';
 import { toast } from 'sonner';
-import { Loader2, Save, Truck } from 'lucide-react';
+import { ImagePlus, Loader2, Save, Truck } from 'lucide-react';
 import { WILAYAS, normalizeWilayaRates } from '@/lib/wilayas';
 
+function compressHeroImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+    image.onload = () => {
+      const scale = Math.min(1, 1000 / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      const context = canvas.getContext('2d');
+      if (!context) { URL.revokeObjectURL(url); reject(new Error('Unable to process image')); return; }
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.62));
+    };
+    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Unable to read image')); };
+    image.src = url;
+  });
+}
+
 export function SettingsTab({ settings, onSaved }: { settings: StoreSettings; onSaved: (settings: StoreSettings) => void }) {
-  const [form, setForm] = useState({ ...settings, wilaya_shipping_rates: normalizeWilayaRates(settings.wilaya_shipping_rates) });
+  const [form, setForm] = useState({ ...settings, hero_slides: settings.hero_slides || [] as HeroSlideSettings[], wilaya_shipping_rates: normalizeWilayaRates(settings.wilaya_shipping_rates) });
+  const [uploadingSlide, setUploadingSlide] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const update = (key: keyof StoreSettings, value: string | number | boolean) => setForm((current) => ({ ...current, [key]: value }));
+  const updateSlide = (index: number, key: keyof HeroSlideSettings, value: string) => setForm((current) => ({ ...current, hero_slides: current.hero_slides.map((slide, slideIndex) => slideIndex === index ? { ...slide, [key]: value } : slide) }));
+  const uploadSlideImage = async (index: number, file: File | undefined) => {
+    if (!file) return;
+    setUploadingSlide(index);
+    try { updateSlide(index, 'image', await compressHeroImage(file)); toast.success('Slide image ready'); }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'Unable to upload image'); }
+    finally { setUploadingSlide(null); }
+  };
   const updateWilayaRate = (code: string, method: 'home' | 'desk', value: number) => setForm((current) => ({ ...current, wilaya_shipping_rates: { ...current.wilaya_shipping_rates, [code]: { ...current.wilaya_shipping_rates[code], [method]: Math.max(0, Number.isFinite(value) ? value : 0) } } }));
 
   async function handleSave(event: React.FormEvent) {
@@ -37,6 +66,17 @@ export function SettingsTab({ settings, onSaved }: { settings: StoreSettings; on
       <h1 className="font-serif text-3xl text-burgundy-700">Store Settings</h1>
       <p className="text-burgundy/55 mt-2 mb-8">Manage the live footer content shown across your storefront.</p>
       <form onSubmit={handleSave} className="bg-champagne-100 rounded-lg p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="md:col-span-2 border-b border-burgundy/10 pb-5">
+          <h2 className="font-serif text-2xl text-burgundy-700">Homepage Hero Slides</h2>
+          <p className="text-sm text-burgundy/55 mt-1 mb-4">Edit the three homepage slides. Images are compressed before being stored.</p>
+          <div className="grid gap-5 lg:grid-cols-3">
+            {form.hero_slides.map((slide, index) => <div key={index} className="rounded-md border border-burgundy/10 bg-champagne-50 p-3 space-y-3">
+              <div className="aspect-[4/3] overflow-hidden rounded bg-burgundy/10">{slide.image && <><span className="sr-only">Slide image preview</span>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={slide.image} alt={`Slide ${index + 1}`} className="h-full w-full object-cover" /></>}</div>
+              <label className="luxe-btn-secondary flex cursor-pointer items-center justify-center gap-2"><ImagePlus className="h-4 w-4" />{uploadingSlide === index ? 'Processing...' : 'Upload image'}<input type="file" accept="image/*" className="sr-only" disabled={uploadingSlide !== null} onChange={(event) => void uploadSlideImage(index, event.target.files?.[0])} /></label>
+              {(['subtitle', 'title', 'cta', 'href'] as const).map((key) => <label key={key} className="block"><span className="luxe-label">{key}</span><input value={slide[key]} onChange={(event) => updateSlide(index, key, event.target.value)} className="luxe-input" /></label>)}
+            </div>)}
+          </div>
+        </div>
         {([
           ['phone', 'Contact phone number'], ['email', 'Contact email address'], ['address', 'Physical address'],
           ['instagram', 'Instagram URL'], ['tiktok', 'TikTok URL'], ['facebook', 'Facebook URL'],

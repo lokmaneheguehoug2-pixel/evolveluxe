@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { HeroSlideSettings } from '@/lib/types';
 
 type Slide = {
   image: string;
@@ -12,7 +13,7 @@ type Slide = {
   href: string;
 };
 
-const slides: Slide[] = [
+const defaultSlides: Slide[] = [
   {
     image:
       'https://images.pexels.com/photos/30953652/pexels-photo-30953652.jpeg?auto=compress&cs=tinysrgb&w=1600',
@@ -39,16 +40,17 @@ const slides: Slide[] = [
   },
 ];
 
-export function HeroCarousel() {
+export function HeroCarousel({ slides: configuredSlides }: { slides?: HeroSlideSettings[] }) {
+  const slides = configuredSlides?.length === 3 ? configuredSlides : defaultSlides;
   const [current, setCurrent] = useState(0);
 
   const next = useCallback(() => {
     setCurrent((c) => (c + 1) % slides.length);
-  }, []);
+  }, [slides.length]);
 
   const prev = useCallback(() => {
     setCurrent((c) => (c - 1 + slides.length) % slides.length);
-  }, []);
+  }, [slides.length]);
 
   useEffect(() => {
     const timer = setInterval(next, 6000);

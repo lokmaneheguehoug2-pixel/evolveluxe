@@ -508,6 +508,8 @@ function ProductForm({
     stock: product?.stock || 0,
     is_featured: product?.is_featured || false,
     is_on_sale: product?.is_on_sale || false,
+    rating: product?.rating || 0,
+    review_count: product?.review_count || 0,
   });
   const [saving, setSaving] = useState(false);
   const [compressing, setCompressing] = useState(false);
@@ -566,8 +568,8 @@ function ProductForm({
       stock: Number.isFinite(Number(form.stock)) ? Number(form.stock) : 0,
       is_featured: form.is_featured,
       is_on_sale: form.is_on_sale,
-      rating: product?.rating || 0,
-      review_count: product?.review_count || 0,
+      rating: Math.min(5, Math.max(0, Number(form.rating) || 0)),
+      review_count: Math.max(0, Math.floor(Number(form.review_count) || 0)),
       tags: product?.tags || [],
       updated_at: serverTimestamp(),
     };
@@ -645,6 +647,14 @@ function ProductForm({
             <div>
               <label className="luxe-label">Stock</label>
               <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} className="luxe-input" />
+            </div>
+            <div>
+              <label className="luxe-label">Rating (0–5 stars)</label>
+              <input type="number" min="0" max="5" step="0.1" value={form.rating} onChange={(e) => setForm({ ...form, rating: Number(e.target.value) })} className="luxe-input" />
+            </div>
+            <div>
+              <label className="luxe-label">Review count</label>
+              <input type="number" min="0" step="1" value={form.review_count} onChange={(e) => setForm({ ...form, review_count: Number(e.target.value) })} className="luxe-input" />
             </div>
           <div className="md:col-span-2">
             <label className="luxe-label">Product Images</label>

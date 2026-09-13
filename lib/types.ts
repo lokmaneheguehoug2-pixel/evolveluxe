@@ -7,7 +7,16 @@ export type Category = {
   created_at: string;
 };
 
+export type HeroSlideSettings = {
+  image: string;
+  title: string;
+  subtitle: string;
+  cta: string;
+  href: string;
+};
+
 export type StoreSettings = {
+  hero_slides?: HeroSlideSettings[];
   phone: string;
   email: string;
   address: string;
