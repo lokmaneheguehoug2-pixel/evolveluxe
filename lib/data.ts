@@ -15,10 +15,17 @@ import {
   DocumentData,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Product, Category, Coupon, Order, Review, OrderInput, StoreSettings } from '@/lib/types';
+import type { Product, Category, Coupon, Order, Review, OrderInput, StoreSettings, HeroSlideSettings } from '@/lib/types';
 import { createDefaultWilayaRates, normalizeWilayaRates } from '@/lib/wilayas';
 
+const defaultHeroSlides: HeroSlideSettings[] = [
+  { image: 'https://images.pexels.com/photos/30953652/pexels-photo-30953652.jpeg?auto=compress&cs=tinysrgb&w=1600', title: 'New Arrivals', subtitle: 'Autumn / Winter 2026 Collection', cta: 'Discover', href: '/products' },
+  { image: 'https://images.pexels.com/photos/8718334/pexels-photo-8718334.jpeg?auto=compress&cs=tinysrgb&w=1600', title: 'Eyewear Reimagined', subtitle: 'Hand-crafted luxury sunglasses', cta: 'Shop Sunglasses', href: '/products?category=sunglasses' },
+  { image: 'https://images.pexels.com/photos/7697958/pexels-photo-7697958.jpeg?auto=compress&cs=tinysrgb&w=1600', title: 'The Gentleman Edit', subtitle: 'Curated essentials for the modern man', cta: 'Explore', href: '/products' },
+];
+
 const defaultStoreSettings: StoreSettings = {
+  hero_slides: defaultHeroSlides,
   phone: '+213 555 000 000',
   email: 'contact@evolveluxe.dz',
   address: 'Alger, Algeria',
@@ -40,7 +47,8 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     const snapshot = await getDoc(doc(db, 'settings', 'store'));
     if (!snapshot.exists()) return defaultStoreSettings;
     const data = snapshot.data();
-    return { ...defaultStoreSettings, ...data, wilaya_shipping_rates: normalizeWilayaRates(data.wilaya_shipping_rates) } as StoreSettings;
+    const heroSlides = Array.isArray(data.hero_slides) && data.hero_slides.length === 3 ? data.hero_slides : defaultHeroSlides;
+    return { ...defaultStoreSettings, ...data, hero_slides: heroSlides, wilaya_shipping_rates: normalizeWilayaRates(data.wilaya_shipping_rates) } as StoreSettings;
   } catch {
     return defaultStoreSettings;
   }
