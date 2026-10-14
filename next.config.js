@@ -6,6 +6,8 @@ const nextConfig = {
   images: { unoptimized: true },
   env: {
     apiKey: process.env.apiKey,
+    apiKey_2: process.env.apiKey_2,
+    NEXT_PUBLIC_FIREBASE_API_KEY: process.env.apiKey_2 || process.env.apiKey,
   },
 };
 
