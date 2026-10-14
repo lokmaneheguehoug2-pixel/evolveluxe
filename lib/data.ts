@@ -151,7 +151,8 @@ export async function getCategories(): Promise<Category[]> {
     const q = query(collection(db, 'categories'), orderBy('name'));
     const snap = await getDocs(q);
     return snap.docs.map((d) => snapToCategory({ id: d.id, ...d.data() }));
-  } catch {
+  } catch (error) {
+    console.error('[v0] Failed to load categories', error);
     return [];
   }
 }
@@ -207,7 +208,8 @@ export async function getProducts(opts?: {
 
     if (opts?.limit) products = products.slice(0, opts.limit);
     return products;
-  } catch {
+  } catch (error) {
+    console.error('[v0] Failed to load products', error);
     return [];
   }
 }
