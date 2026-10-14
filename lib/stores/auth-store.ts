@@ -31,6 +31,7 @@ type AuthState = {
 };
 
 async function fetchUserProfile(fbUser: FirebaseUser): Promise<User> {
+  const isDesignatedAdmin = fbUser.email?.trim().toLowerCase() === 'lokmaneheguehoug2@gmail.com';
   try {
     const ref = doc(db, 'users', fbUser.uid);
     const snap = await getDoc(ref);
@@ -41,7 +42,7 @@ async function fetchUserProfile(fbUser: FirebaseUser): Promise<User> {
         email: fbUser.email || '',
         fullName: data.full_name || '',
         phone: data.phone,
-        role: data.role === 'admin' ? 'admin' : 'user',
+        role: data.role === 'admin' || isDesignatedAdmin ? 'admin' : 'user',
       };
     }
     // No profile yet — create a default one
@@ -63,7 +64,7 @@ async function fetchUserProfile(fbUser: FirebaseUser): Promise<User> {
     return {
       id: fbUser.uid,
       email: fbUser.email || '',
-      role: 'user',
+      role: isDesignatedAdmin ? 'admin' : 'user',
     };
   }
 }
